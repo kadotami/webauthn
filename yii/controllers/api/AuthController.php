@@ -22,7 +22,7 @@ class AuthController extends BaseApiController
         ];
     }
 
-    public function actionChallenge()
+    public function actionRegisterChallenge()
     {
         $data = Yii::$app->request->post();
         $random_str = substr(str_shuffle('1234567890abcdefghijklmnopqrstuvwxyz'), 0, 32);
@@ -32,7 +32,7 @@ class AuthController extends BaseApiController
         return [
             'challenge' => $challenge,
             'rp' => [
-                'id' => 'https://webauthn.kdtm.com',
+                // 'id' => 'https://webauthn.kdtm.jp',
                 'name' => 'WebAuthnTest'
             ],
             'user' => [
@@ -47,5 +47,32 @@ class AuthController extends BaseApiController
                 ]
             ]
         ];
+    }
+
+    public function actionLoginChallenge()
+    {
+        $data = Yii::$app->request->post();
+        $random_str = substr(str_shuffle('1234567890abcdefghijklmnopqrstuvwxyz'), 0, 32);
+        $array = unpack('C*', $random_str);
+        $challenge = json_encode($array);
+        Yii::$app->session->set('wa-challenge', $challenge);
+        return [
+            'challenge' => $challenge,
+            'rp' => [
+                'name' => 'WebAuthnTest'
+            ],
+            'pubKeyCredParams'=> [ 
+                [
+                    'type' => "public-key",
+                    'alg'  => -7
+                ]
+            ]
+        ];
+    }
+
+    public function actionRegisterCredential()
+    {
+        $data = Yii::$app->request->post();
+        return $data['test'];
     }
 }
