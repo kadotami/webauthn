@@ -1,0 +1,9 @@
+# local consumer
+- hosts:
+    - local
+  remote_user: vagrant
+  roles:
+    - app.yum_packages
+    - app.mysql
+    - app.php-fpm
+    - app.nginx

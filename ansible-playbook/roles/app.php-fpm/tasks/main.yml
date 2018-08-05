@@ -1,0 +1,12 @@
+---
+- name: copy conf
+  template: src="{{ item.src }}" dest="{{ item.dest }}"
+  with_items:
+    - { src: "www.conf", dest: "/etc/php-fpm.d/www.conf" }
+
+# 本番ではやっちゃだめ
+- name: change permission for session
+  command: chmod 777 -R /var/lib/php/
+  
+- name: php-fpm restart
+  command: systemctl restart php-fpm

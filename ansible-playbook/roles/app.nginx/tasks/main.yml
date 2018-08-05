@@ -1,0 +1,25 @@
+---
+- name: make directry
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "nginx"
+    group: "nginx"
+  with_items:
+    - '/etc/nginx/cert'
+    - '/var/log/nginx'
+
+
+- name: copy nginx files
+  template: src="{{ item.src }}" dest="{{ item.dest }}"
+  with_items:
+    - {src: 'nginx.conf', dest: '/etc/nginx/nginx.conf'}
+    - {src: 'server.crt', dest: '/etc/nginx/cert/server.crt'}
+    - {src: 'server.key', dest: '/etc/nginx/cert/server.key'}
+
+- name: nginx restart
+  systemd:
+    name: nginx.service
+    state: restarted
+    daemon_reload: yes
+    enabled: yes

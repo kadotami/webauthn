@@ -1,0 +1,28 @@
+---
+- name: add yum repository
+  yum: name="{{ item }}" state=latest
+  with_items:
+    - epel-release
+    - http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
+
+- name: nodejs repo
+  shell: "curl --silent --location https://rpm.nodesource.com/setup_10.x | sudo bash -"
+
+- name: yum install
+  yum: name={{ item }} state=latest
+  with_items:
+    - nginx
+    - nodejs
+    - git
+
+- name: yum php install
+  yum: name="{{ item }}" enablerepo=remi-php71 state=latest
+  with_items:
+    - php
+    - php-devel
+    - php-mbstring
+    - php-pdo
+    - php-gd
+    - php-mysql
+    - php-xml
+    - php-fpm

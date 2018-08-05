@@ -1,0 +1,7 @@
+# local consumer
+- hosts:
+    - local
+  remote_user: vagrant
+  roles:
+    - app.php-fpm
+    - app.nginx
