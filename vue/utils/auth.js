@@ -13,8 +13,13 @@ export function logout (obj) {
   return axios.post(url, obj).then(response => response)
 }
 
-export async function getChallenge () {
-  const url = `${BASE_URL}/challenge`
+export async function getRegisterChallenge () {
+  const url = `${BASE_URL}/register-challenge`
   const obj = await axios.get(url)
   return obj 
+}
+
+export async function postRegisterCredential (obj) {
+  const url = `${BASE_URL}/register-credential`
+  return axios.post(url, obj).then(response => response)
 }

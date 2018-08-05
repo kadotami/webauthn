@@ -14,7 +14,7 @@
         .thirdPartyBtn Yahoo! JAPAN IDで登録
         .thirdPartyBtn Facebookアカウントで登録
         .thirdPartyBtn Googleアカウントで登録
-        .thirdPartyBtn LINEアカウントで登録
+        .thirdPartyBtn(@click="post()") LINEアカウントで登録
 
       
 </template>
@@ -23,7 +23,7 @@
 import { mapGetters } from 'vuex'
 import { mapMutations } from 'vuex'
 import { mapActions } from 'vuex'
-import { getChallenge } from '../utils/auth'
+import { getRegisterChallenge, postRegisterCredential } from '../utils/auth'
 
 export default {
   computed: mapGetters([
@@ -34,10 +34,18 @@ export default {
       'login': 'auth/login'
     }),
     register: async function() {
-      const challenge = await getChallenge()
+      const challenge = await getRegisterChallenge()
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge))).buffer
       challenge.data.user.id = new Uint8Array(16)
-      const credential = await navigator.credentials.get({publicKey: challenge.data})
+      console.log(challenge)
+      const credential = await navigator.credentials.create({publicKey: challenge.data})
+      console.log(credential);
+    },
+    post: async function() {
+      const result = await postRegisterCredential(
+        {"test": "test"}
+      )
+      console.log(result)
     }
   }
 }

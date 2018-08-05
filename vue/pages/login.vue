@@ -22,7 +22,7 @@
 import { mapGetters } from 'vuex'
 import { mapMutations } from 'vuex'
 import { mapActions } from 'vuex'
-import { getChallenge } from '../utils/auth'
+import { getLoginChallenge } from '../utils/auth'
 
 export default {
   computed: mapGetters([
@@ -33,11 +33,11 @@ export default {
       'login': 'auth/login'
     }),
     logina: async function() {
-      const challenge = await getChallenge()
+      const challenge = await getLoginChallenge()
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge))).buffer
       challenge.data.user.id = new Uint8Array(16)
       console.log(challenge)
-      const credential = await navigator.credentials.create({publicKey: challenge.data})
+      const credential = await navigator.credentials.get({publicKey: challenge.data})
     }
   }
 }
