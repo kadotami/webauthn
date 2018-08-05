@@ -41,5 +41,11 @@ module.exports = {
   ],
   workbox: {
     dev: true, //開発環境でもPWAできるように
+  },
+  watchers: {
+    webpack: {
+      aggregateTimeout: 300,
+      poll: 1000
+    }
   }
 }

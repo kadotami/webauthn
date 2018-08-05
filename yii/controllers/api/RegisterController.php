@@ -32,7 +32,7 @@ class RegisterController extends BaseApiController
         return [
             'challenge' => $challenge,
             'rp' => [
-                'id' => 'http://webauthn.kdtm.com',
+                'id' => 'https://webauthn.kdtm.com',
                 'name' => 'WebAuthnTest'
             ],
             'user' => [

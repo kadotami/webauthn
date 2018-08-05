@@ -31,7 +31,8 @@ chown -R vagrant.vagrant /home/vagrant/.ssh
         v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
         v.customize ["setextradata", :id, "VBoxInternal/Devices/VMMDev/0/Config/GetHostTimeDisabled", 0]
       end
-      server.vm.synced_folder "./vue", "/home/vagrant/vue", type: "rsync", rsync__exclude: "node_modules", owner: "vagrant", group: "vagrant", :create => true, :mount_options => ["dmode=777", "fmode=777"]
+      #server.vm.synced_folder "./vue", "/home/vagrant/vue", type: "rsync", rsync__exclude: "node_modules", owner: "vagrant", group: "vagrant", :create => true, :mount_options => ["dmode=777", "fmode=777"]
+      server.vm.synced_folder "./vue", "/home/vagrant/vue", rsync__exclude: "node_modules", owner: "vagrant", group: "vagrant", :create => true, :mount_options => ["dmode=777", "fmode=777"]
       server.vm.synced_folder "./yii", "/home/vagrant/yii", owner: "vagrant", group: "vagrant", :create => true, :mount_options => ["dmode=777", "fmode=777"]
       server.vm.synced_folder "./ansible-playbook", "/home/vagrant/ansible-playbook", owner: "vagrant", group: "vagrant", :create => true, :mount_options => ["dmode=777", "fmode=777"]
       server.vm.synced_folder "./vagrant", "/home/vagrant/vagrant", owner: "vagrant", group: "vagrant", :create => true, :mount_options => ["dmode=777", "fmode=777"]
