@@ -1,0 +1,148 @@
+<template lang="pug">
+  .container
+    section.content
+      .mailForm
+        h1 新規登録
+        form(@submit.prevent="register()")
+          label メールアドレスを変更してください
+          input(type="text")
+          button(type="submit") 次へ
+        p.toLogin
+          nuxt-link(to="/login") IDをお持ちの方はこちら
+      .thirdPartyArea
+        .thirdPartyBtn(@click="register()") WebAuthnで登録
+        .thirdPartyBtn Yahoo! JAPAN IDで登録
+        .thirdPartyBtn Facebookアカウントで登録
+        .thirdPartyBtn Googleアカウントで登録
+        .thirdPartyBtn LINEアカウントで登録
+
+      
+</template>
+
+<script>
+import { mapGetters } from 'vuex'
+import { mapMutations } from 'vuex'
+import { mapActions } from 'vuex'
+import { getChallenge } from '../utils/auth'
+
+export default {
+  computed: mapGetters([
+    'getIsLogin'
+  ]),
+  methods: {
+    ...mapActions({
+      'login': 'auth/login'
+    }),
+    register: async function() {
+      const challenge = await getChallenge()
+      challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge))).buffer
+      challenge.data.user.id = new Uint8Array(16)
+      const credential = await navigator.credentials.get({publicKey: challenge.data})
+    }
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+  $container_width: 384px;
+  $bg_color: #fff;
+  .container {
+    font-family: Verdana, Roboto, "Droid Sans", "メイリオ", Meiryo, "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "ＭＳ Ｐゴシック", sans-serif;
+    position: relative;
+    width: $container_width;
+    margin: 30px auto 40px;
+    .content {
+      background: $bg_color;
+      box-shadow: 0px 0px 6px rgba(0,0,0,0.2);
+      .mailForm {
+        padding: 42px;
+        border-bottom: 1px solid #eaeaea;
+        position: relative;
+
+        label {
+          display: block;
+          margin: 16px 0 4px 0;
+          color: #464646;
+          font-size: 14px;
+          line-height: 1.4em;
+        }
+
+        input {
+          height: 40px;
+          border: 2px solid #eaeaea;
+          padding: 0 12px;
+          box-sizing: border-box;
+          border-radius: 0;
+          font-size: 14px;
+          line-height: 14px;
+          width: 300px;
+        }
+
+        button {
+          border-radius: 3px;
+          background: #3282c9;
+          color: #fff;
+          font-size: 16px;
+          font-weight: bold;
+          text-decoration: none;
+          box-shadow: 0px 2px 5px #a5a5a5;
+          border: none;
+          cursor: pointer;
+          text-align: center;
+          display: block;
+          width: 300px;
+          height: 60px;
+          margin: 16px 0 0 0;
+        }
+        .toLogin {
+          margin-top: 16px;
+          font-size: 14px;
+          line-height: 1.6em;
+        }
+
+        &:after {
+          position: absolute;
+          bottom: -17px;
+          left: 50%;
+          width: 34px;
+          height: 34px;
+          line-height: 34px;
+          margin: -17px 0 0 -17px;
+          text-align: center;
+          border: solid 1px #eaeaea;
+          border-radius: 50%;
+          background: $bg_color;
+          color: #999;
+          content: "or";
+        }
+      }
+
+      .thirdPartyArea {
+        padding: 42px;
+
+        .thirdPartyBtn {
+          width: 300px;
+          height: 48px;
+          padding: 0 20px 0 10px;
+          margin-bottom: 12px;
+          box-sizing: border-box;
+          border-radius: 3px;
+          background: #fff;
+          color: #505050;
+          font-size: 14px;
+          text-decoration: none;
+          box-shadow: 0px 1px 4px #dadada;
+          border: none;
+          cursor: pointer;
+          position: relative;
+          display: flex;
+          align-items: center;
+          &:hover {
+            box-shadow: 0px 0px 2px #cccccc;
+            transform: translateY(1px);
+          }
+        }
+      }
+    }
+  }
+</style>
