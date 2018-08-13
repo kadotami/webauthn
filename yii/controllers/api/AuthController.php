@@ -32,7 +32,7 @@ class AuthController extends BaseApiController
         return [
             'challenge' => $challenge,
             'rp' => [
-                // 'id' => 'https://webauthn.kdtm.jp',
+                'id' => 'kdtm.com',
                 'name' => 'WebAuthnTest'
             ],
             'user' => [
@@ -73,6 +73,7 @@ class AuthController extends BaseApiController
     public function actionRegisterCredential()
     {
         $data = Yii::$app->request->post();
+        Yii::error('test');
         return $data['test'];
     }
 }

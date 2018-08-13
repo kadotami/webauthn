@@ -39,6 +39,12 @@ $config = [
                 [
                     'class' => 'yii\log\FileTarget',
                     'levels' => ['error', 'warning'],
+                    'logFile' => '/home/vagrant/yii/runtime/logs/error.log',
+                ],
+                [
+                    'class' => 'yii\log\FileTarget',
+                    'levels' => ['error'],
+                    'logFile' => '/home/vagrant/yii/runtime/logs/app.log',
                 ],
             ],
         ],
