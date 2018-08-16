@@ -2,7 +2,7 @@
   <div>
     <header>
       <div class='header-content'>
-        <img src='/img/logo.png'>
+        Webauthn
       </div>
     </header>
     <nuxt/>

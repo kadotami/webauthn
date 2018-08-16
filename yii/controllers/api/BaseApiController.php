@@ -18,6 +18,13 @@ class BaseApiController extends Controller
         parent::init();
 
         $this->enableCsrfValidation = false;
+        Yii::$app->response->charset = 'utf-8';
+        Yii::$app->response->setStatusCode(200);
+        $headers = Yii::$app->response->headers;
+        $headers->set('Pragma', 'no-cache');
+        $headers->add('Cache-Control', 'no-store, no-cache, must-revalidate');
+        $headers->add('Cache-Control', 'post-check=0, pre-check=0');
+        $headers->add('Access-Control-Allow-Credentials', true);
         Yii::$app->request->parsers = [
             'application/json' => 'yii\web\JsonParser',
         ];
@@ -49,6 +56,7 @@ class BaseApiController extends Controller
      */
     public function afterAction($action, $result)
     {
+        $result = parent::afterAction($action, $result);
         $result = Json::encode($result);
         return $result;
     }

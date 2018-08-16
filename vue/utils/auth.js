@@ -15,11 +15,17 @@ export function logout (obj) {
 
 export async function getRegisterChallenge () {
   const url = `${BASE_URL}/register-challenge`
+  const obj = await axios.get(url, {withCredentials: true})
+  return obj 
+}
+
+export async function getLoginChallenge () {
+  const url = `${BASE_URL}/login-challenge`
   const obj = await axios.get(url)
   return obj 
 }
 
 export async function postRegisterCredential (obj) {
   const url = `${BASE_URL}/register-credential`
-  return axios.post(url, obj).then(response => response)
+  return axios.post(url, obj, {withCredentials: true}).then(response => response)
 }
