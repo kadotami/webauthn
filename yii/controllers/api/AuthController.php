@@ -4,12 +4,15 @@ namespace app\controllers\api;
 
 use Yii;
 use app\controllers\api\BaseApiController;
-use yii\helpers\Json;
+use \yii\helpers\Json;
 use \yii\web\Cookie;
+use \CBOR\CBOREncoder;
+use \yii\base\Exception;
 
 class AuthController extends BaseApiController
 {
     public $modelClass = 'app\models\User';
+    const RPID = 'kdtm.com';
 
     /**
      * 
@@ -34,7 +37,7 @@ class AuthController extends BaseApiController
         return [
             'challenge' => $challenge,
             'rp' => [
-                'id' => 'kdtm.com',
+                'id' => self::RPID,
                 'name' => 'WebAuthnTest'
             ],
             'user' => [
@@ -55,10 +58,26 @@ class AuthController extends BaseApiController
     {
         $data = Yii::$app->request->post();
         $clientDataJSON = $this->bufferArrayToJsonArray($data['response']['clientDataJSON']);
-        $attestationObject = $this->bufferArrayToString($data['response']['attestationObject']);
+        $attestationObject = $this->bufferArrayToObject($data['response']['attestationObject']);
+        
         if (!$this->isValidClientDataJSON($clientDataJSON)) {
+            throw new Exception("invalid!!!");
         }
-        Yii::error($attestationObject);
+
+        $authData = $attestationObject['authData'];
+        $authData_byte = $authData->get_byte_string();
+        $authData_byte_array = unpack('C*',$authData_byte);
+
+        $rpid_hash = array_slice($authData_byte_array, 0, 32);
+        $flag = str_pad(dechex($authData_byte_array[32]), 8, 0, STR_PAD_LEFT);
+        $counter = array_slice($authData_byte_array, 33, 4);
+
+        if(!$this->isValidRPID($rpid_hash)) {
+            throw new Exception("invalid!!!");
+        }
+
+
+
         return $clientDataJSON;
     }
 
@@ -92,17 +111,21 @@ class AuthController extends BaseApiController
         return $json;
     }
 
-    private function bufferArrayToString($buffer_array)
+    private function bufferArrayToObject($buffer_array)
     {
         $array = json_decode($buffer_array, true);
-        $json = implode(array_map("chr", $array));
-        return $json;
+        $CBORstring = implode(array_map("chr", $array));
+        $data = CBOREncoder::decode($CBORstring);
+        return $data;
     }
 
+    /*
+    * ClientDataJSONが正しいかどうかチェック
+    * 
+    */
     private function isValidClientDataJSON($json)
     {
         $challenge = Yii::$app->session->get('wa-challenge');
-        Yii::error($challenge);
         if($json['type'] !== "webauthn.create"
          || $json['origin'] !== "https://webauthn.kdtm.com"
          || base64_decode($json['challenge']) !== $challenge ) {
@@ -110,4 +133,20 @@ class AuthController extends BaseApiController
         }
         return true;
     } 
+
+    /*
+    *
+    * hashで送られてくるripdのsha256が正しいかどうかをチェックする
+    */
+    private function isValidRPID($rpid_hash)
+    {
+        $rpid = '';
+        foreach($rpid_hash as $num) {
+            $rpid = $rpid . str_pad(dechex($num), 2, 0, STR_PAD_LEFT);
+        }
+        if($rpid !== hash("sha256", self::RPID)){
+            return false;
+        }
+        return true;
+    }
 }
