@@ -36,12 +36,13 @@ export default {
     register: async function() {
       const challenge = await getRegisterChallenge()
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge))).buffer
-      challenge.data.user.id = new Uint8Array(16)
+      challenge.data.user.id = new Uint8Array(Object.values(JSON.parse(challenge.data.user.id))).buffer
       const credential = await navigator.credentials.create({publicKey: challenge.data})
       const response = credential.response
 
       const body = {
         id:    credential.id,
+        raw_id: JSON.stringify(new Uint8Array(credential.rawId)),
         type:  credential.type,
         response: {
           attestationObject: JSON.stringify(new Uint8Array(credential.response.attestationObject)),
@@ -52,6 +53,7 @@ export default {
       await this.post(body)
     },
     post: async function(body) {
+      console.log(body)
       const result = await postRegisterCredential(
         body
       )
