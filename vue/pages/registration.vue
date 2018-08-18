@@ -35,8 +35,8 @@ export default {
     }),
     register: async function() {
       const challenge = await getRegisterChallenge()
-      challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge))).buffer
-      challenge.data.user.id = new Uint8Array(Object.values(JSON.parse(challenge.data.user.id))).buffer
+      challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
+      challenge.data.user.id = new Uint8Array(Object.values(JSON.parse(challenge.data.user.id)))
       const credential = await navigator.credentials.create({publicKey: challenge.data})
       const response = credential.response
 

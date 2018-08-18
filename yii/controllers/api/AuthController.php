@@ -12,7 +12,7 @@ use \yii\base\Exception;
 class AuthController extends BaseApiController
 {
     public $modelClass = 'app\models\User';
-    const RPID = 'kdtm.com';
+    const RPID = 'webauthn.kdtm.com';
 
     /**
      * 
@@ -37,8 +37,8 @@ class AuthController extends BaseApiController
         return [
             'challenge' => $challenge,
             'rp' => [
-                'id' => self::RPID,
-                'name' => 'WebAuthnTest'
+                // 'id' => self::RPID,
+                'name' => 'WebAuthnTest',
             ],
             'user' => [
                 'id' => json_encode(unpack('C*', 'kdtm@test.com')),
@@ -48,7 +48,7 @@ class AuthController extends BaseApiController
             'pubKeyCredParams'=> [ 
                 [
                     'type' => "public-key",
-                    'alg'  => -7
+                    'alg'  => -7,
                 ]
             ],
             // 'attestation' => "direct",
@@ -98,12 +98,15 @@ class AuthController extends BaseApiController
             if($this->convertHex($credentialId) !== $this->convertHex($rawid)){
                 throw new Exception("invalid!!! not match credential id");
             }
-            $this->publicKey($credentialPublicKey);
+
+            $pubkey_string = $this->convertHex($this->publicKey($credentialPublicKey));
+
+            $this->createUser('test', $this->convertHex($credentialId), $pubkey_string);
 
         }
 
 
-        return true;
+        return $credentialPublicKey;
     }
 
     private function publicKey($credentialPublicKey)
@@ -117,7 +120,8 @@ class AuthController extends BaseApiController
         Yii::error($y);
         $z = array_merge([4],$x,$y);
         Yii::error($z);
-
+    
+        return $z;
     }
 
     public function actionLoginChallenge()
@@ -125,8 +129,8 @@ class AuthController extends BaseApiController
         $data = Yii::$app->request->post();
         $random_str = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
         $array = unpack('C*', $random_str);
-        $credentialId = Yii::$app->session->get('wa-credential-id');
-        
+        $user = $this->getUser();
+        $credentialId = $this->convertByteArray($user['credential_id']);
 
         $challenge = json_encode($array);
         Yii::$app->session->set('wa-challenge', $challenge);
@@ -134,11 +138,20 @@ class AuthController extends BaseApiController
             'challenge' => $challenge,
             'allowCredentials' => [
                 [
-                    'type' => "public-key",
                     'id' => json_encode($credentialId),
+                    'type' => "public-key",
                 ],
             ],
         ];
+    }
+
+    public function actionAuthorization()
+    {
+        $data = Yii::$app->request->post();
+
+
+    
+        return true;
     }
 
     private function bufferArrayToJsonArray($buffer_array)
@@ -169,7 +182,7 @@ class AuthController extends BaseApiController
     }
 
     /*
-    * byte arrayを16進数文字列にする
+    * byte array(10進数の配列)を16進数文字列にする
     */
     private function convertHex($byte_array)
     {
@@ -179,6 +192,23 @@ class AuthController extends BaseApiController
         }
         return $value;
     }
+
+    /*
+    * byte array(10進数の配列)を16進数文字列にする
+    */
+    private function convertByteArray($hex)
+    {
+        Yii::error($hex);
+        $array = str_split($hex, 2);
+        Yii::error($array);
+        $value = [];
+        foreach($array as $num) {
+            $value []= hexdec($num);
+        }
+        Yii::error($value);
+        return $value;
+    }
+
 
     /*
     *
@@ -207,4 +237,29 @@ class AuthController extends BaseApiController
         }
         return true;
     } 
+
+    private function createUser($user_name, $credential_id, $publickey)
+    {
+        $sql = <<<SQL
+            INSERT INTO user
+                (user_name, credential_id, publickey)
+            VALUES (:user_name, :credential_id, :publickey)
+SQL;
+        Yii::$app->db->createCommand($sql, [
+            ":user_name" => $user_name,
+            ":credential_id" => $credential_id,
+            ":publickey" => $publickey,
+        ])->execute();
+    }
+
+    private function getUser()
+    {
+        $sql = <<<SQL
+            SELECT  * FROM user
+                WHERE user_name = 'test'
+SQL;
+        $user = Yii::$app->db->createCommand($sql)->queryOne();
+        Yii::error($user['credential_id']);
+        return $user;
+    }
 }
