@@ -34,9 +34,9 @@ export default {
     }),
     logina: async function() {
       const challenge = await getLoginChallenge()
-      challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge))).buffer
-      challenge.data.user.id = new Uint8Array(16)
       console.log(challenge)
+      challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge))).buffer
+      challenge.data.allowCredentials[0].id = new Uint8Array(Object.values(JSON.parse(challenge.data.allowCredentials[0].id))).buffer
       const credential = await navigator.credentials.get({publicKey: challenge.data})
     }
   }

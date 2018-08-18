@@ -51,7 +51,7 @@ class AuthController extends BaseApiController
                     'alg'  => -7
                 ]
             ],
-            'attestation' => "direct",
+            // 'attestation' => "direct",
         ];
     }
 
@@ -93,6 +93,8 @@ class AuthController extends BaseApiController
             $credentialId = array_slice($authData_byte_array, 55, $credentialIdLength);
             $credentialPublicKey = array_slice($authData_byte_array, 55 + $credentialIdLength);
 
+            Yii::$app->session->set('wa-credential-id', $credentialId);
+            Yii::error($credentialId);
             if($this->convertHex($credentialId) !== $this->convertHex($rawid)){
                 throw new Exception("invalid!!! not match credential id");
             }
@@ -101,7 +103,7 @@ class AuthController extends BaseApiController
         }
 
 
-        return $clientDataJSON;
+        return true;
     }
 
     private function publicKey($credentialPublicKey)
@@ -111,6 +113,11 @@ class AuthController extends BaseApiController
         $x = unpack('C*',$publickey_json['-2']->get_byte_string());
         $y = unpack('C*',$publickey_json['-3']->get_byte_string());
 
+        Yii::error($x);
+        Yii::error($y);
+        $z = array_merge([4],$x,$y);
+        Yii::error($z);
+
     }
 
     public function actionLoginChallenge()
@@ -118,24 +125,19 @@ class AuthController extends BaseApiController
         $data = Yii::$app->request->post();
         $random_str = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
         $array = unpack('C*', $random_str);
+        $credentialId = Yii::$app->session->get('wa-credential-id');
+        
 
         $challenge = json_encode($array);
         Yii::$app->session->set('wa-challenge', $challenge);
         return [
             'challenge' => $challenge,
             'allowCredentials' => [
-                'type' => "public-key",
-                'id' => json_encode(unpack('C*', 'kdtm@test.com')),
-            ],
-            'rp' => [
-                'name' => 'WebAuthnTest'
-            ],
-            'pubKeyCredParams'=> [ 
                 [
                     'type' => "public-key",
-                    'alg'  => -7
-                ]
-            ]
+                    'id' => json_encode($credentialId),
+                ],
+            ],
         ];
     }
 
