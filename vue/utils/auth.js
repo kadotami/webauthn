@@ -1,11 +1,10 @@
 import axios from 'axios'
 
 const BASE_URL = `https://api.webauthn.kdtm.com/api/auth`
-// const BASE_URL = `http://localhost:8080/api/auth`
 
 export function login (obj) {
   const url = `${BASE_URL}`
-  return axios.get(url).then(response => response)
+  return axios.post(url, obj, {withCredentials: true}).then(response => response)
 }
 
 export function logout (obj) {
@@ -13,16 +12,16 @@ export function logout (obj) {
   return axios.post(url, obj).then(response => response)
 }
 
-export async function getRegisterChallenge () {
+export async function getRegisterChallenge (obj) {
   const url = `${BASE_URL}/register-challenge`
-  const obj = await axios.get(url, {withCredentials: true})
-  return obj 
+  const challenge = await axios.post(url, obj,{withCredentials: true})
+  return challenge 
 }
 
-export async function getLoginChallenge () {
+export async function getLoginChallenge (obj) {
   const url = `${BASE_URL}/login-challenge`
-  const obj = await axios.get(url)
-  return obj 
+  const challenge = await axios.post(url, obj, {withCredentials: true})
+  return challenge 
 }
 
 export async function postRegisterCredential (obj) {

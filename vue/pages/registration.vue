@@ -4,8 +4,8 @@
       .mailForm
         h1 新規登録
         form(@submit.prevent="register()")
-          label メールアドレスを変更してください
-          input(type="text")
+          label メールアドレスを入力してください
+          input(v-model="email",type="text")
           button(type="submit") 次へ
         p.toLogin
           nuxt-link(to="/login") IDをお持ちの方はこちら
@@ -29,18 +29,28 @@ export default {
   computed: mapGetters([
     'getIsLogin'
   ]),
+  data: () => {
+    return { 
+      email: ''
+    }
+  },
   methods: {
     ...mapActions({
       'login': 'auth/login'
     }),
     register: async function() {
-      const challenge = await getRegisterChallenge()
+      const user = {
+        'email': this.email
+      }
+      console.log(user)
+      const challenge = await getRegisterChallenge(user)
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
       challenge.data.user.id = new Uint8Array(Object.values(JSON.parse(challenge.data.user.id)))
       const credential = await navigator.credentials.create({publicKey: challenge.data})
       const response = credential.response
 
       const body = {
+        email: this.email,
         id:    credential.id,
         raw_id: JSON.stringify(new Uint8Array(credential.rawId)),
         type:  credential.type,

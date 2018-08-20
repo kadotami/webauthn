@@ -32,6 +32,7 @@ class AuthController extends BaseApiController
         $challenge = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
         $array = unpack('C*', $challenge);
         Yii::$app->session->set('wa-challenge', $challenge);
+        Yii::$app->session->set('wa-username', $data['email']);
 
         $challenge = json_encode($array);
         return [
@@ -41,7 +42,7 @@ class AuthController extends BaseApiController
                 'name' => 'WebAuthnTest',
             ],
             'user' => [
-                'id' => json_encode(unpack('C*', 'kdtm@test.com')),
+                'id' => json_encode(unpack('C*', $data['email'])),
                 'name' => "mondamin",
                 'displayName' => "mondamin"
             ],
@@ -62,11 +63,13 @@ class AuthController extends BaseApiController
         $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
         $attestationObject = $this->bufferArrayToCBORObject(json_decode($data['response']['attestationObject'], true));
         
+        if($data['email'] !==  Yii::$app->session->get('wa-username')) {
+            throw new Exception("invalid!!! email is not correct");
+        }
+
         if (!$this->isValidClientDataJSON($clientDataJSON)) {
             throw new Exception("invalid!!!");
         }
-
-        Yii::error($attestationObject);
 
         $authData = $attestationObject['authData'];
         $authData_byte = $authData->get_byte_string();
@@ -78,7 +81,7 @@ class AuthController extends BaseApiController
         $counter = $this->convertEndian(array_slice($authData_byte_array, 33, 4));
 
         if(!$this->isValidRPID($rpid_hash)) {
-            throw new Exception("invalid!!!");
+            throw new Exception("invalid!!! not match rpid");
         }
 
         $user_present = substr($flag,7,1);
@@ -93,8 +96,6 @@ class AuthController extends BaseApiController
             $credentialId = array_slice($authData_byte_array, 55, $credentialIdLength);
             $credentialPublicKey = array_slice($authData_byte_array, 55 + $credentialIdLength);
 
-            Yii::$app->session->set('wa-credential-id', $credentialId);
-            Yii::error($credentialId);
             if($this->convertHex($credentialId) !== $this->convertHex($rawid)){
                 throw new Exception("invalid!!! not match credential id");
             }
@@ -102,11 +103,12 @@ class AuthController extends BaseApiController
             $pubkey_string = $this->convertHex($this->publicKey($credentialPublicKey));
 
             $this->createUser('test', $this->convertHex($credentialId), $pubkey_string);
-
         }
 
 
-        return $credentialPublicKey;
+        return [
+            "result" => 'ok'
+        ];
     }
 
     private function publicKey($credentialPublicKey)
@@ -115,11 +117,7 @@ class AuthController extends BaseApiController
         // key is [1,3,-1,-2,-3]
         $x = unpack('C*',$publickey_json['-2']->get_byte_string());
         $y = unpack('C*',$publickey_json['-3']->get_byte_string());
-
-        Yii::error($x);
-        Yii::error($y);
         $z = array_merge([4],$x,$y);
-        Yii::error($z);
     
         return $z;
     }
