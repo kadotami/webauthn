@@ -46,7 +46,7 @@ class AuthController extends BaseApiController
                 'name' => "mondamin",
                 'displayName' => "mondamin"
             ],
-            'pubKeyCredParams'=> [ 
+            'pubKeyCredParams'=> [
                 [
                     'type' => "public-key",
                     'alg'  => -7,
@@ -67,7 +67,7 @@ class AuthController extends BaseApiController
             throw new Exception("invalid!!! email is not correct");
         }
 
-        if (!$this->isValidClientDataJSON($clientDataJSON)) {
+        if (!$this->isValidRegistrationClientDataJSON($clientDataJSON)) {
             throw new Exception("invalid!!!");
         }
 
@@ -125,6 +125,7 @@ class AuthController extends BaseApiController
     public function actionLoginChallenge()
     {
         $data = Yii::$app->request->post();
+        $email = $data['email'];
         $random_str = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
         $array = unpack('C*', $random_str);
         $user = $this->getUser();
@@ -143,10 +144,18 @@ class AuthController extends BaseApiController
         ];
     }
 
-    public function actionAuthorization()
+    public function actionAuthentication()
     {
         $data = Yii::$app->request->post();
+        $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
 
+        if (!$this->isValidAuthenticationClientDataJSON($clientDataJSON)) {
+            throw new Exception("invalid!!!");
+        }
+
+        $email = $data['email'];
+
+        $user = $this->getUser($email);
 
     
         return true;
@@ -225,7 +234,22 @@ class AuthController extends BaseApiController
     * ClientDataJSONが正しいかどうかチェック
     * 
     */
-    private function isValidClientDataJSON($json)
+    private function isValidRegistrationClientDataJSON($json)
+    {
+        $challenge = Yii::$app->session->get('wa-challenge');
+        if($json['type'] !== "webauthn.create"
+         || $json['origin'] !== "https://webauthn.kdtm.com"
+         || base64_decode($json['challenge']) !== $challenge ) {
+            return false;
+        }
+        return true;
+    } 
+
+    /*
+    * ClientDataJSONが正しいかどうかチェック
+    * 
+    */
+    private function isValidAuthenticationClientDataJSON($json)
     {
         $challenge = Yii::$app->session->get('wa-challenge');
         if($json['type'] !== "webauthn.create"

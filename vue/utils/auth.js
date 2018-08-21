@@ -3,7 +3,7 @@ import axios from 'axios'
 const BASE_URL = `https://api.webauthn.kdtm.com/api/auth`
 
 export function login (obj) {
-  const url = `${BASE_URL}`
+  const url = `${BASE_URL}/authentication`
   return axios.post(url, obj, {withCredentials: true}).then(response => response)
 }
 

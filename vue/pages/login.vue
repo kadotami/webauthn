@@ -8,7 +8,7 @@
             label メールアドレス（ID）
             input(type=text)
             label パスワード
-            input(type=password)
+            input(v-model=email, type=password)
             button(type=submit) ログイン
         .login__column
           .thirdPartyBtn(@click="logina()") WebAuthnでログイン
@@ -22,21 +22,51 @@
 import { mapGetters } from 'vuex'
 import { mapMutations } from 'vuex'
 import { mapActions } from 'vuex'
-import { getLoginChallenge } from '../utils/auth'
+import { getLoginChallenge, login } from '../utils/auth'
 
 export default {
   computed: mapGetters([
     'getIsLogin'
   ]),
+  data: () => {
+    return { 
+      email: ''
+    }
+  },
   methods: {
     ...mapActions({
       'login': 'auth/login'
     }),
     logina: async function() {
-      const challenge = await getLoginChallenge()
+      const user = {
+        'email': this.email
+      }
+      const challenge = await getLoginChallenge(user)
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
       challenge.data.allowCredentials[0].id = new Uint8Array(Object.values(JSON.parse(challenge.data.allowCredentials[0].id)))
       const credential = await navigator.credentials.get({ "publicKey": challenge.data})
+      console.log(credential)
+
+      const body = {
+        email: this.email,
+        id: credential.id,
+        raw_id: JSON.stringify(new Uint8Array(credential.rawId)),
+        type: credential.type,
+        response: {
+          authenticatorData: JSON.stringify(new Uint8Array(credential.response.authenticatorData)),
+          clientDataJSON: JSON.stringify(new Uint8Array(credential.response.clientDataJSON)),
+          signature: JSON.stringify(new Uint8Array(credential.response.signature)),
+        }
+      }
+
+      await this.post(body)
+    },
+    post: async function(body) {
+      console.log(body)
+      const result = await login(
+        body
+      )
+      console.log(result)
     }
   }
 }
