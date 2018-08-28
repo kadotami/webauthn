@@ -12,7 +12,7 @@ use \yii\base\Exception;
 class AuthController extends BaseApiController
 {
     public $modelClass = 'app\models\User';
-    const RPID = 'webauthn.kdtm.com';
+    const RPID = 'kdtm.com';
 
     /**
      * 
@@ -33,12 +33,13 @@ class AuthController extends BaseApiController
         $array = unpack('C*', $challenge);
         Yii::$app->session->set('wa-challenge', $challenge);
         Yii::$app->session->set('wa-username', $data['email']);
+        $rpid = self::RPID;
 
         $challenge = json_encode($array);
         return [
             'challenge' => $challenge,
             'rp' => [
-                // 'id' => self::RPID,
+                'id' => $rpid,
                 'name' => 'WebAuthnTest',
             ],
             'user' => [
@@ -131,10 +132,15 @@ class AuthController extends BaseApiController
         $array = unpack('C*', $challenge);
         $user = $this->getUser();
         $credentialId = $this->convertByteArray($user['credential_id']);
+        $rpid = self::RPID;
 
         $challenge = json_encode($array);
         return [
             'challenge' => $challenge,
+            'rp' => [
+                'id' => $rpid,
+                'name' => 'WebAuthnTest',
+            ],
             'allowCredentials' => [
                 [
                     'id' => json_encode($credentialId),
