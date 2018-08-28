@@ -68,7 +68,7 @@ class AuthController extends BaseApiController
         }
 
         if (!$this->isValidRegistrationClientDataJSON($clientDataJSON)) {
-            throw new Exception("invalid!!!");
+            throw new Exception("invalid!!! client data is not correct");
         }
 
         $authData = $attestationObject['authData'];
@@ -126,13 +126,13 @@ class AuthController extends BaseApiController
     {
         $data = Yii::$app->request->post();
         $email = $data['email'];
-        $random_str = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
-        $array = unpack('C*', $random_str);
+        $challenge = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
+        Yii::$app->session->set('wa-challenge', $challenge);
+        $array = unpack('C*', $challenge);
         $user = $this->getUser();
         $credentialId = $this->convertByteArray($user['credential_id']);
 
         $challenge = json_encode($array);
-        Yii::$app->session->set('wa-challenge', $challenge);
         return [
             'challenge' => $challenge,
             'allowCredentials' => [
@@ -150,7 +150,7 @@ class AuthController extends BaseApiController
         $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
 
         if (!$this->isValidAuthenticationClientDataJSON($clientDataJSON)) {
-            throw new Exception("invalid!!!");
+            throw new Exception("invalid!!! client data is not correct");
         }
 
         $email = $data['email'];
@@ -252,7 +252,8 @@ class AuthController extends BaseApiController
     private function isValidAuthenticationClientDataJSON($json)
     {
         $challenge = Yii::$app->session->get('wa-challenge');
-        if($json['type'] !== "webauthn.create"
+        Yii::error($json['origin']);
+        if($json['type'] !== "webauthn.get"
          || $json['origin'] !== "https://webauthn.kdtm.com"
          || base64_decode($json['challenge']) !== $challenge ) {
             return false;
