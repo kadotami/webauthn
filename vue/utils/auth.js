@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const BASE_URL = `https://api.webauthn.kdtm.com/api/auth`
+// const BASE_URL = `https://webauthn.kdtm.com/yii/api/auth`
 
 export function login (obj) {
   const url = `${BASE_URL}/authentication`

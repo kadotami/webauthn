@@ -53,14 +53,15 @@ class AuthController extends BaseApiController
                     'alg'  => -7,
                 ]
             ],
-            // 'attestation' => "direct",
+            'attestation' => "direct",
         ];
     }
 
     public function actionRegisterCredential()
     {
         $data = Yii::$app->request->post();
-        $rawid = $array = json_decode($data['raw_id'], true);
+        Yii::error($data);
+        $rawid = json_decode($data['raw_id'], true);
         $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
         $attestationObject = $this->bufferArrayToCBORObject(json_decode($data['response']['attestationObject'], true));
         
@@ -242,9 +243,10 @@ class AuthController extends BaseApiController
     */
     private function isValidRegistrationClientDataJSON($json)
     {
+        $origin = Yii::$app->request->origin;
         $challenge = Yii::$app->session->get('wa-challenge');
         if($json['type'] !== "webauthn.create"
-         || $json['origin'] !== "https://webauthn.kdtm.com"
+         || $json['origin'] !== $origin //"https://webauthn.kdtm.com"
          || base64_decode($json['challenge']) !== $challenge ) {
             return false;
         }
