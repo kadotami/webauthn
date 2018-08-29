@@ -164,16 +164,37 @@ class AuthController extends BaseApiController
         $data = Yii::$app->request->post();
         $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
 
+        // clientDataのチェック
         if (!$this->isValidAuthenticationClientDataJSON($clientDataJSON)) {
             throw new Exception("invalid!!! client data is not correct");
         }
 
-        $email = $data['email'];
+        $authenticatorData = json_decode($data['response']['authenticatorData'], true);
 
+        // clientdataJsonのハッシュ値を取得する
+        $clientDataStr = $this->convertHex(json_decode($data['response']['clientDataJSON'], true));
+        $clientDataHash = hash('sha256', $clientDataStr);
+        Yii::error($clientDataHash);
+
+        $rpid_hash = array_slice($authenticatorData, 0, 32);
+        $flag = str_pad(decbin($authenticatorData[32]), 8, 0, STR_PAD_LEFT);
+        $sig_count = array_slice($authenticatorData, 33);
+        if(!$this->isValidRPID($rpid_hash)) {
+            throw new Exception("invalid!!! not match rpid");
+        }
+
+        $email = $data['email'];
         $origin = Yii::$app->request->origin;
         $rpid = $this->testRpid($origin);
-
         $user = $this->getUser($email, $rpid);
+
+        $user_present = substr($flag,7,1);
+        $user_verified = substr($flag,5,1);
+        $attested_credential_data = substr($flag,1,1);
+        $extension_data_included = substr($flag,0,1);
+
+
+
 
     
         return true;
@@ -270,10 +291,11 @@ class AuthController extends BaseApiController
     */
     private function isValidAuthenticationClientDataJSON($json)
     {
+        $origin = Yii::$app->request->origin;
         $challenge = Yii::$app->session->get('wa-challenge');
         Yii::error($json['origin']);
         if($json['type'] !== "webauthn.get"
-         || $json['origin'] !== "https://webauthn.kdtm.com"
+         || $json['origin'] !== $origin
          || base64_decode($json['challenge']) !== $challenge ) {
             return false;
         }
