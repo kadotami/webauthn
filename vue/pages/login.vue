@@ -4,14 +4,14 @@
       .login
         .login__column
           h1 ログイン
-          form(@submit.prevent="logina()")
+          form(@submit.prevent="wa_login()")
             label メールアドレス（ID）
-            input(type=text)
+            input(v-model="email", type=text)
             label パスワード
-            input(v-model=email, type=password)
+            input(type=password)
             button(type=submit) ログイン
         .login__column
-          .thirdPartyBtn(@click="logina()") WebAuthnでログイン
+          .thirdPartyBtn(@click="wa_login()") WebAuthnでログイン
           .thirdPartyBtn Yahoo! JAPAN IDでログイン
           .thirdPartyBtn Facebookアカウントでログイン
           .thirdPartyBtn Googleアカウントでログイン
@@ -37,13 +37,17 @@ export default {
     ...mapActions({
       'login': 'auth/login'
     }),
-    logina: async function() {
+    wa_login: async function() {
       const user = {
         'email': this.email
       }
+      console.log(user)
       const challenge = await getLoginChallenge(user)
+      console.log(challenge)
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
       challenge.data.allowCredentials[0].id = new Uint8Array(Object.values(JSON.parse(challenge.data.allowCredentials[0].id)))
+      
+      console.log(challenge.data)
       const credential = await navigator.credentials.get({ "publicKey": challenge.data})
       console.log(credential)
 

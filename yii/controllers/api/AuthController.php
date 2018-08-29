@@ -13,6 +13,7 @@ class AuthController extends BaseApiController
 {
     public $modelClass = 'app\models\User';
     const RPID = 'kdtm.com';
+    // const RPID = 'kbtm.com';
 
     /**
      * 
@@ -29,11 +30,16 @@ class AuthController extends BaseApiController
     public function actionRegisterChallenge()
     {
         $data = Yii::$app->request->post();
+        if (empty($data['email'])){
+            throw new Exception("invalid!!! email is not allowed empty");
+        }
         $challenge = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
         $array = unpack('C*', $challenge);
         Yii::$app->session->set('wa-challenge', $challenge);
         Yii::$app->session->set('wa-username', $data['email']);
-        $rpid = self::RPID;
+
+        $origin = Yii::$app->request->origin;
+        $rpid = $this->testRpid($origin);
 
         $challenge = json_encode($array);
         return [
@@ -53,14 +59,16 @@ class AuthController extends BaseApiController
                     'alg'  => -7,
                 ]
             ],
-            'attestation' => "direct",
+            // 'attestation' => "direct",
         ];
     }
 
     public function actionRegisterCredential()
     {
         $data = Yii::$app->request->post();
-        Yii::error($data);
+        if (empty($data['email'])) {
+            throw new Exception("invalid!!! email is not allowed empty");
+        }
         $rawid = json_decode($data['raw_id'], true);
         $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
         $attestationObject = $this->bufferArrayToCBORObject(json_decode($data['response']['attestationObject'], true));
@@ -91,6 +99,9 @@ class AuthController extends BaseApiController
         $attested_credential_data = substr($flag,1,1);
         $extension_data_included = substr($flag,0,1);
 
+        $origin = Yii::$app->request->origin;
+        $rpid = $this->testRpid($origin);
+
         if($attested_credential_data) {
             $aaguid              = array_slice($authData_byte_array, 37, 16);
             $credentialIdLength  = array_slice($authData_byte_array, 53, 2);
@@ -104,9 +115,8 @@ class AuthController extends BaseApiController
 
             $pubkey_string = $this->convertHex($this->publicKey($credentialPublicKey));
 
-            $this->createUser('test', $this->convertHex($credentialId), $pubkey_string);
+            $this->createUser($data['email'], $rpid, $this->convertHex($credentialId), $pubkey_string);
         }
-
 
         return [
             "result" => 'ok'
@@ -131,17 +141,15 @@ class AuthController extends BaseApiController
         $challenge = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
         Yii::$app->session->set('wa-challenge', $challenge);
         $array = unpack('C*', $challenge);
-        $user = $this->getUser();
+        $origin = Yii::$app->request->origin;
+        $rpid = $this->testRpid($origin);
+        $user = $this->getUser($email, $rpid);
         $credentialId = $this->convertByteArray($user['credential_id']);
-        $rpid = self::RPID;
 
         $challenge = json_encode($array);
         return [
             'challenge' => $challenge,
-            'rp' => [
-                'id' => $rpid,
-                'name' => 'WebAuthnTest',
-            ],
+            'rpId' => $rpid,
             'allowCredentials' => [
                 [
                     'id' => json_encode($credentialId),
@@ -162,7 +170,10 @@ class AuthController extends BaseApiController
 
         $email = $data['email'];
 
-        $user = $this->getUser($email);
+        $origin = Yii::$app->request->origin;
+        $rpid = $this->testRpid($origin);
+
+        $user = $this->getUser($email, $rpid);
 
     
         return true;
@@ -269,28 +280,40 @@ class AuthController extends BaseApiController
         return true;
     } 
 
-    private function createUser($user_name, $credential_id, $publickey)
+    private function createUser($email, $rpid, $credential_id, $publickey)
     {
         $sql = <<<SQL
             INSERT INTO user
-                (user_name, credential_id, publickey)
-            VALUES (:user_name, :credential_id, :publickey)
+                (email, rpid, credential_id, publickey)
+            VALUES (:email, :rpid, :credential_id, :publickey)
 SQL;
         Yii::$app->db->createCommand($sql, [
-            ":user_name" => $user_name,
+            ":email" => $email,
+            ":rpid" => $rpid,
             ":credential_id" => $credential_id,
             ":publickey" => $publickey,
         ])->execute();
     }
 
-    private function getUser()
+    private function getUser($email, $rpid)
     {
         $sql = <<<SQL
             SELECT  * FROM user
-                WHERE user_name = 'test'
+                WHERE email = :email
+                AND rpid = :rpid
 SQL;
-        $user = Yii::$app->db->createCommand($sql)->queryOne();
-        Yii::error($user['credential_id']);
+        $user = Yii::$app->db->createCommand($sql,[
+            ":rpid" => $rpid,
+            ":email" => $email,
+        ])->queryOne();
         return $user;
+    }
+
+    private function testRpid($origin)
+    {
+        // if($origin === 'https://webauthn.kbtm.com') {
+        //     return $origin;
+        // }
+        return self::RPID;
     }
 }

@@ -42,8 +42,8 @@ export default {
       const user = {
         'email': this.email
       }
-      console.log(user)
       const challenge = await getRegisterChallenge(user)
+      console.log(challenge)
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
       challenge.data.user.id = new Uint8Array(Object.values(JSON.parse(challenge.data.user.id)))
       const credential = await navigator.credentials.create({publicKey: challenge.data})

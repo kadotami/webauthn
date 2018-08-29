@@ -14,7 +14,8 @@ class m180713_031439_user_table extends Migration
     {
         $this->createTable('user', [
             'id' => $this->primaryKey(),
-            'user_name' => $this->string(),
+            'rpid' => $this->string(),
+            'email' => $this->string(),
             'password' => $this->string(),
             'credential_id' => $this->string(),
             'publickey' => $this->text(),
