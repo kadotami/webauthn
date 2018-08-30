@@ -4,14 +4,11 @@
       .login
         .login__column
           h1 ログイン
-          form(@submit.prevent="wa_login()")
+          .form
             label メールアドレス（ID）
             input(v-model="email", type=text)
-            label パスワード
-            input(type=password)
-            button(type=submit) ログイン
+            button(@click="wa_login()") WebAuthnでログイン
         .login__column
-          .thirdPartyBtn(@click="wa_login()") WebAuthnでログイン
           .thirdPartyBtn Yahoo! JAPAN IDでログイン
           .thirdPartyBtn Facebookアカウントでログイン
           .thirdPartyBtn Googleアカウントでログイン

@@ -3,14 +3,13 @@
     section.content
       .mailForm
         h1 新規登録
-        form(@submit.prevent="register()")
+        .form
           label メールアドレスを入力してください
           input(v-model="email",type="text")
-          button(type="submit") 次へ
+          button(@click="register()") WebAuthnで登録
         p.toLogin
           nuxt-link(to="/login") IDをお持ちの方はこちら
       .thirdPartyArea
-        .thirdPartyBtn(@click="register()") WebAuthnで登録
         .thirdPartyBtn Yahoo! JAPAN IDで登録
         .thirdPartyBtn Facebookアカウントで登録
         .thirdPartyBtn Googleアカウントで登録
