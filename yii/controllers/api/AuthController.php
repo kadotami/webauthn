@@ -69,6 +69,7 @@ class AuthController extends BaseApiController
         if (empty($data['email'])) {
             throw new Exception("invalid!!! email is not allowed empty");
         }
+
         $rawid = json_decode($data['raw_id'], true);
         $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
         $attestationObject = $this->bufferArrayToCBORObject(json_decode($data['response']['attestationObject'], true));
@@ -130,7 +131,7 @@ class AuthController extends BaseApiController
         $x = unpack('C*',$publickey_json['-2']->get_byte_string());
         $y = unpack('C*',$publickey_json['-3']->get_byte_string());
         $z = array_merge([4],$x,$y);
-    
+
         return $z;
     }
 
@@ -162,41 +163,72 @@ class AuthController extends BaseApiController
     public function actionAuthentication()
     {
         $data = Yii::$app->request->post();
+        $email = $data['email'];
+        $origin = Yii::$app->request->origin;
+        $rpid = $this->testRpid($origin);
         $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
-
+        $authenticatorData = json_decode($data['response']['authenticatorData'], true);
+        $signature = json_decode($data['response']['signature'], true);
+        
         // clientDataのチェック
         if (!$this->isValidAuthenticationClientDataJSON($clientDataJSON)) {
             throw new Exception("invalid!!! client data is not correct");
         }
-
-        $authenticatorData = json_decode($data['response']['authenticatorData'], true);
-
+        
         // clientdataJsonのハッシュ値を取得する
-        $clientDataStr = $this->convertHex(json_decode($data['response']['clientDataJSON'], true));
-        $clientDataHash = hash('sha256', $clientDataStr);
-        Yii::error($clientDataHash);
+        $clientDataStr = json_decode($data['response']['clientDataJSON'], true);
+        $clientDataStr = implode(array_map("chr", $clientDataStr));
+        $clientDataHash = hash('sha256', $clientDataStr); // ok
 
+        Yii::error($this->convertByteArray($clientDataHash));
+
+        // rpidとフラグのチェック
         $rpid_hash = array_slice($authenticatorData, 0, 32);
         $flag = str_pad(decbin($authenticatorData[32]), 8, 0, STR_PAD_LEFT);
         $sig_count = array_slice($authenticatorData, 33);
         if(!$this->isValidRPID($rpid_hash)) {
             throw new Exception("invalid!!! not match rpid");
         }
-
-        $email = $data['email'];
-        $origin = Yii::$app->request->origin;
-        $rpid = $this->testRpid($origin);
-        $user = $this->getUser($email, $rpid);
-
         $user_present = substr($flag,7,1);
         $user_verified = substr($flag,5,1);
         $attested_credential_data = substr($flag,1,1);
         $extension_data_included = substr($flag,0,1);
 
+        Yii::error($authenticatorData);
+        
+        $confirm_sig = array_merge($authenticatorData, $this->convertByteArray($clientDataHash));
+        Yii::error($confirm_sig);
 
+        
+        $user = $this->getUser($email, $rpid);
+        $pubkey = $user['publickey'];
+        Yii::error($pubkey);
 
+        // メタデータの付与
+        $pubkey = "3059301306072a8648ce3d020106082a8648ce3d030107034200" . $pubkey;
+        // 10進数のbyte arrayへ変換
+        $pubkey = $this->convertByteArray($pubkey);
+        Yii::error($pubkey);
 
-    
+        // byte arrayからbase64へ
+        $pubkey = implode(array_map("chr", $pubkey));
+        $pubkey = base64_encode($pubkey);
+        
+        // PEMに整形
+        // $pubkey = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE05Bflr4e+XoT+lEgubRweQ68IQXOaLEmawNze0s2WK6JKu6mNckSDiNsJin/MkEDhrkT8DmQIzOnLF+/KJ0A/g==';
+        $pubkey = chunk_split($pubkey,64, "\n");
+        $pubkey_pem = "-----BEGIN PUBLIC KEY-----\n$pubkey-----END PUBLIC KEY-----\n";
+        Yii::error($pubkey_pem);
+
+        Yii::error($signature);
+        $signature = implode(array_map("chr", $signature));
+        
+        $confirm_sig = implode(array_map("chr", $confirm_sig));
+        Yii::error($confirm_sig);
+
+        $ok = openssl_verify($confirm_sig, $signature, $pubkey_pem, 'sha256');
+        Yii::error($ok);
+
         return true;
     }
 
@@ -240,18 +272,15 @@ class AuthController extends BaseApiController
     }
 
     /*
-    * byte array(10進数の配列)を16進数文字列にする
+    * 16進数文字列をbyte array(10進数の配列)にする
     */
     private function convertByteArray($hex)
     {
-        Yii::error($hex);
         $array = str_split($hex, 2);
-        Yii::error($array);
         $value = [];
         foreach($array as $num) {
             $value []= hexdec($num);
         }
-        Yii::error($value);
         return $value;
     }
 
@@ -333,9 +362,9 @@ SQL;
 
     private function testRpid($origin)
     {
-        // if($origin === 'https://webauthn.kbtm.com') {
-        //     return $origin;
-        // }
+        if($origin === 'https://webauthn.kbtm.com') {
+            return 'webauthn.kbtm.com';
+        }
         return self::RPID;
     }
 }
