@@ -84,11 +84,10 @@ class AuthController extends BaseApiController
 
         $authData = $attestationObject['authData'];
         $authData_byte = $authData->get_byte_string();
-        $authData_byte_array = unpack('C*',$authData_byte);
+        $authData_byte_array = array_values(unpack('C*',$authData_byte));
 
         $rpid_hash = array_slice($authData_byte_array, 0, 32);
-        // bufferArrayは0から始まらないことに注意
-        $flag = str_pad(decbin($authData_byte_array[33]), 8, 0, STR_PAD_LEFT);
+        $flag = str_pad(decbin($authData_byte_array[32]), 8, 0, STR_PAD_LEFT);
         $counter = $this->convertEndian(array_slice($authData_byte_array, 33, 4));
 
         if(!$this->isValidRPID($rpid_hash)) {
