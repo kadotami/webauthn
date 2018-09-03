@@ -1,19 +1,21 @@
 <template lang="pug">
-  .container
-    section.content
-      .mailForm
-        h1 新規登録
-        .form
-          label メールアドレスを入力してください
-          input(v-model="email",type="text")
-          button(@click="register()") WebAuthnで登録
-        p.toLogin
-          nuxt-link(to="/login") IDをお持ちの方はこちら
-      .thirdPartyArea
-        .thirdPartyBtn Yahoo! JAPAN IDで登録
-        .thirdPartyBtn Facebookアカウントで登録
-        .thirdPartyBtn Googleアカウントで登録
-        .thirdPartyBtn(@click="post()") LINEアカウントで登録
+  .registration
+    KeyTouch(:display='display')
+    .container
+      section.content
+        .mailForm
+          h1 新規登録
+          .form
+            label メールアドレスを入力してください
+            input(v-model="email",type="text")
+            button(@click="register()") WebAuthnで登録
+          p.toLogin
+            nuxt-link(to="/login") IDをお持ちの方はこちら
+        .thirdPartyArea
+          .thirdPartyBtn Yahoo! JAPAN IDで登録
+          .thirdPartyBtn Facebookアカウントで登録
+          .thirdPartyBtn Googleアカウントで登録
+          .thirdPartyBtn(@click="post()") LINEアカウントで登録
 
       
 </template>
@@ -23,14 +25,19 @@ import { mapGetters } from 'vuex'
 import { mapMutations } from 'vuex'
 import { mapActions } from 'vuex'
 import { getRegisterChallenge, postRegisterCredential } from '../utils/auth'
+import KeyTouch from '~/components/KeyTouch.vue'
 
 export default {
+  components: {
+    KeyTouch
+  },
   computed: mapGetters([
     'getIsLogin'
   ]),
   data: () => {
     return { 
-      email: ''
+      email: '',
+      display: true
     }
   },
   methods: {
@@ -45,7 +52,9 @@ export default {
       console.log(challenge)
       challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
       challenge.data.user.id = new Uint8Array(Object.values(JSON.parse(challenge.data.user.id)))
+      this.display = true
       const credential = await navigator.credentials.create({publicKey: challenge.data})
+      this.display = false
       const response = credential.response
 
       const body = {
