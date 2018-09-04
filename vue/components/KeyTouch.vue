@@ -10,6 +10,7 @@
           .key-block
             .bar
             .bar.bar-bottom
+      h1 待機中…
 </template>
 
 <script>
@@ -28,7 +29,7 @@ export default {
     position: absolute;
     width: 30%;
     height: 300px;
-    margin: 0 35%;
+    margin: 24px 35%;
     box-shadow: 0px 0px 6px rgba(0,0,0,0.2);
     background: $bg_color;
     box-sizing: border-box;

@@ -13,7 +13,6 @@ class AuthController extends BaseApiController
 {
     public $modelClass = 'app\models\User';
     const RPID = 'kdtm.com';
-    // const RPID = 'kbtm.com';
 
     /**
      * 
@@ -29,27 +28,26 @@ class AuthController extends BaseApiController
 
     public function actionRegisterChallenge()
     {
+        // デモ用
+        $origin = Yii::$app->request->origin;
+        $rpid = $this->testRpid($origin);
+
         $data = Yii::$app->request->post();
         if (empty($data['email'])){
             throw new Exception("invalid!!! email is not allowed empty");
         }
-        $challenge = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
-        $array = unpack('C*', $challenge);
+        $challenge = $this->createRandomString(32);
         Yii::$app->session->set('wa-challenge', $challenge);
         Yii::$app->session->set('wa-username', $data['email']);
-
-        $origin = Yii::$app->request->origin;
-        $rpid = $this->testRpid($origin);
-
-        $challenge = json_encode($array);
+        
         return [
-            'challenge' => $challenge,
+            'challenge' => unpack('C*', $challenge),
             'rp' => [
                 'id' => $rpid,
                 'name' => 'WebAuthnTest',
             ],
             'user' => [
-                'id' => json_encode(unpack('C*', $data['email'])),
+                'id' => unpack('C*', $data['email']),
                 'name' => "mondamin",
                 'displayName' => "mondamin"
             ],
@@ -70,9 +68,9 @@ class AuthController extends BaseApiController
             throw new Exception("invalid!!! email is not allowed empty");
         }
 
-        $rawid = json_decode($data['raw_id'], true);
-        $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
-        $attestationObject = $this->bufferArrayToCBORObject(json_decode($data['response']['attestationObject'], true));
+        $rawid = $data['raw_id'];
+        $clientDataJSON = $this->bufferArrayToJsonArray($data['response']['clientDataJSON']);
+        $attestationObject = $this->bufferArrayToCBORObject($data['response']['attestationObject']);
         
         if($data['email'] !==  Yii::$app->session->get('wa-username')) {
             throw new Exception("invalid!!! email is not correct");
@@ -136,23 +134,23 @@ class AuthController extends BaseApiController
 
     public function actionLoginChallenge()
     {
-        $data = Yii::$app->request->post();
-        $email = $data['email'];
-        $challenge = substr(str_shuffle(str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', 32)), 0, 32);
-        Yii::$app->session->set('wa-challenge', $challenge);
-        $array = unpack('C*', $challenge);
+        //test
         $origin = Yii::$app->request->origin;
         $rpid = $this->testRpid($origin);
-        $user = $this->getUser($email, $rpid);
-        $credentialId = $this->convertByteArray($user['credential_id']);
 
-        $challenge = json_encode($array);
+        $data = Yii::$app->request->post();
+        $email = $data['email'];
+        $challenge = $this->createRandomString(32);
+        Yii::$app->session->set('wa-challenge', $challenge);
+        $user = $this->getUser($email, $rpid);
+        $credentialId = $this->convertHexToByteArray($user['credential_id']);
+
         return [
-            'challenge' => $challenge,
+            'challenge' => unpack('C*', $challenge),
             'rpId' => $rpid,
             'allowCredentials' => [
                 [
-                    'id' => json_encode($credentialId),
+                    'id' => $credentialId,
                     'type' => "public-key",
                 ],
             ],
@@ -165,9 +163,9 @@ class AuthController extends BaseApiController
         $email = $data['email'];
         $origin = Yii::$app->request->origin;
         $rpid = $this->testRpid($origin);
-        $clientDataJSON = $this->bufferArrayToJsonArray(json_decode($data['response']['clientDataJSON'], true));
-        $authenticatorData = json_decode($data['response']['authenticatorData'], true);
-        $signature = json_decode($data['response']['signature'], true);
+        $clientDataJSON = $this->bufferArrayToJsonArray($data['response']['clientDataJSON']);
+        $authenticatorData = $data['response']['authenticatorData'];
+        $signature = $data['response']['signature'];
         
         // clientDataのチェック
         if (!$this->isValidAuthenticationClientDataJSON($clientDataJSON)) {
@@ -175,11 +173,9 @@ class AuthController extends BaseApiController
         }
         
         // clientdataJsonのハッシュ値を取得する
-        $clientDataStr = json_decode($data['response']['clientDataJSON'], true);
+        $clientDataStr = $data['response']['clientDataJSON'];
         $clientDataStr = implode(array_map("chr", $clientDataStr));
-        $clientDataHash = hash('sha256', $clientDataStr); // ok
-
-        Yii::error($this->convertByteArray($clientDataHash));
+        $clientDataHash = hash('sha256', $clientDataStr);
 
         // rpidとフラグのチェック
         $rpid_hash = array_slice($authenticatorData, 0, 32);
@@ -195,7 +191,7 @@ class AuthController extends BaseApiController
 
         Yii::error($authenticatorData);
         
-        $confirm_sig = array_merge($authenticatorData, $this->convertByteArray($clientDataHash));
+        $confirm_sig = array_merge($authenticatorData, $this->convertHexToByteArray($clientDataHash));
         Yii::error($confirm_sig);
 
         
@@ -206,7 +202,7 @@ class AuthController extends BaseApiController
         // メタデータの付与
         $pubkey = "3059301306072a8648ce3d020106082a8648ce3d030107034200" . $pubkey;
         // 10進数のbyte arrayへ変換
-        $pubkey = $this->convertByteArray($pubkey);
+        $pubkey = $this->convertHexToByteArray($pubkey);
         Yii::error($pubkey);
 
         // byte arrayからbase64へ
@@ -214,7 +210,6 @@ class AuthController extends BaseApiController
         $pubkey = base64_encode($pubkey);
         
         // PEMに整形
-        // $pubkey = 'MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE05Bflr4e+XoT+lEgubRweQ68IQXOaLEmawNze0s2WK6JKu6mNckSDiNsJin/MkEDhrkT8DmQIzOnLF+/KJ0A/g==';
         $pubkey = chunk_split($pubkey,64, "\n");
         $pubkey_pem = "-----BEGIN PUBLIC KEY-----\n$pubkey-----END PUBLIC KEY-----\n";
         Yii::error($pubkey_pem);
@@ -226,9 +221,11 @@ class AuthController extends BaseApiController
         Yii::error($confirm_sig);
 
         $ok = openssl_verify($confirm_sig, $signature, $pubkey_pem, 'sha256');
-        Yii::error($ok);
+        if($ok === 1 ) {
+            return true;
+        }
 
-        return true;
+        return false;
     }
 
     private function bufferArrayToJsonArray($buffer_array)
@@ -273,7 +270,7 @@ class AuthController extends BaseApiController
     /*
     * 16進数文字列をbyte array(10進数の配列)にする
     */
-    private function convertByteArray($hex)
+    private function convertHexToByteArray($hex)
     {
         $array = str_split($hex, 2);
         $value = [];
@@ -328,7 +325,19 @@ class AuthController extends BaseApiController
             return false;
         }
         return true;
-    } 
+    }
+
+    /*
+    * ランダムな文字列を生成する
+    * 
+    */
+    private function createRandomString($length)
+    {
+        $challenge = str_repeat('0123456789abcdefghijklmnopqrstuvwxyz', $length);
+        $challenge = str_shuffle($challenge);
+        $challenge = substr($challenge, 0, $length);
+        return $challenge;
+    }
 
     private function createUser($email, $rpid, $credential_id, $publickey)
     {

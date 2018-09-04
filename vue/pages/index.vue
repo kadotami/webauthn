@@ -1,18 +1,7 @@
-<template>
-  <section class="container">
-    <div>
-      <app-logo/>
-      <h1 class="title">
-        vue
-      </h1>
-      <h2 class="subtitle">
-        Nuxt.js aaa
-      </h2>
-      <div class="links">
-        <nuxt-link to="/login">ログイン</nuxt-link>
-      </div>
-    </div>
-  </section>
+<template lang="pug">
+  .top
+    section.container
+      p ようこそ
 </template>
 
 <script>

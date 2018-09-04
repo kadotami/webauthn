@@ -41,8 +41,8 @@ export default {
       console.log(user)
       const challenge = await getLoginChallenge(user)
       console.log(challenge)
-      challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
-      challenge.data.allowCredentials[0].id = new Uint8Array(Object.values(JSON.parse(challenge.data.allowCredentials[0].id)))
+      challenge.data.challenge = new Uint8Array(Object.values(challenge.data.challenge))
+      challenge.data.allowCredentials[0].id = new Uint8Array(Object.values(challenge.data.allowCredentials[0].id))
       
       console.log(challenge.data)
       const credential = await navigator.credentials.get({ "publicKey": challenge.data})
@@ -51,12 +51,12 @@ export default {
       const body = {
         email: this.email,
         id: credential.id,
-        raw_id: JSON.stringify(new Uint8Array(credential.rawId)),
+        raw_id: new Uint8Array(credential.rawId),
         type: credential.type,
         response: {
-          authenticatorData: JSON.stringify(new Uint8Array(credential.response.authenticatorData)),
-          clientDataJSON: JSON.stringify(new Uint8Array(credential.response.clientDataJSON)),
-          signature: JSON.stringify(new Uint8Array(credential.response.signature)),
+          authenticatorData: new Uint8Array(credential.response.authenticatorData),
+          clientDataJSON: new Uint8Array(credential.response.clientDataJSON),
+          signature: new Uint8Array(credential.response.signature),
         }
       }
 

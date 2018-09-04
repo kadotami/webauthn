@@ -37,7 +37,7 @@ export default {
   data: () => {
     return { 
       email: '',
-      display: true
+      display: false
     }
   },
   methods: {
@@ -50,8 +50,8 @@ export default {
       }
       const challenge = await getRegisterChallenge(user)
       console.log(challenge)
-      challenge.data.challenge = new Uint8Array(Object.values(JSON.parse(challenge.data.challenge)))
-      challenge.data.user.id = new Uint8Array(Object.values(JSON.parse(challenge.data.user.id)))
+      challenge.data.challenge = new Uint8Array(Object.values(challenge.data.challenge))
+      challenge.data.user.id = new Uint8Array(Object.values(challenge.data.user.id))
       this.display = true
       const credential = await navigator.credentials.create({publicKey: challenge.data})
       this.display = false
@@ -60,13 +60,14 @@ export default {
       const body = {
         email: this.email,
         id:    credential.id,
-        raw_id: JSON.stringify(new Uint8Array(credential.rawId)),
+        raw_id: new Uint8Array(credential.rawId),
         type:  credential.type,
         response: {
-          attestationObject: JSON.stringify(new Uint8Array(credential.response.attestationObject)),
-          clientDataJSON:    JSON.stringify(new Uint8Array(credential.response.clientDataJSON)),
+          attestationObject: new Uint8Array(credential.response.attestationObject),
+          clientDataJSON:    new Uint8Array(credential.response.clientDataJSON),
         }
       }
+      console.log(body)
 
       await this.post(body)
     },
