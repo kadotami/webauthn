@@ -69,8 +69,8 @@ class AuthController extends BaseApiController
         }
 
         $rawid = $data['raw_id'];
-        $clientDataJSON = $this->bufferArrayToJsonArray($data['response']['clientDataJSON']);
-        $attestationObject = $this->bufferArrayToCBORObject($data['response']['attestationObject']);
+        $clientDataJSON = $this->byteArrayToJsonArray($data['response']['clientDataJSON']);
+        $attestationObject = $this->byteArrayToCBORObject($data['response']['attestationObject']);
         
         if($data['email'] !==  Yii::$app->session->get('wa-username')) {
             throw new Exception("invalid!!! email is not correct");
@@ -86,7 +86,7 @@ class AuthController extends BaseApiController
 
         $rpid_hash = array_slice($authData_byte_array, 0, 32);
         $flag = str_pad(decbin($authData_byte_array[32]), 8, 0, STR_PAD_LEFT);
-        $counter = $this->convertEndian(array_slice($authData_byte_array, 33, 4));
+        $counter = $this->byteArrayToEndian(array_slice($authData_byte_array, 33, 4));
 
         if(!$this->isValidRPID($rpid_hash)) {
             throw new Exception("invalid!!! not match rpid");
@@ -106,15 +106,15 @@ class AuthController extends BaseApiController
         if($attested_credential_data) {
             $aaguid              = array_slice($authData_byte_array, 37, 16);
             $credentialIdLength  = array_slice($authData_byte_array, 53, 2);
-            $credentialIdLength = $this->convertEndian($credentialIdLength);
+            $credentialIdLength = $this->byteArrayToEndian($credentialIdLength);
             $credentialId = array_slice($authData_byte_array, 55, $credentialIdLength);
             $credentialPublicKey = array_slice($authData_byte_array, 55 + $credentialIdLength);
 
-            if($this->convertHex($credentialId) !== $this->convertHex($rawid)){
+            if($this->byteArrayToHex($credentialId) !== $this->byteArrayToHex($rawid)){
                 throw new Exception("invalid!!! not match credential id");
             }
 
-            $pubkey_string = $this->convertHex($this->publicKey($credentialPublicKey));
+            $pubkey_string = $this->byteArrayToHex($this->publicKey($credentialPublicKey));
 
             Yii::error($attestationObject['fmt']);
             if($attestationObject['fmt'] === 'fido-u2f') {
@@ -123,7 +123,7 @@ class AuthController extends BaseApiController
                 }
             }
 
-            $this->createUser($data['email'], $rpid, $this->convertHex($credentialId), $pubkey_string);
+            $this->createUser($data['email'], $rpid, $this->byteArrayToHex($credentialId), $pubkey_string);
         }
 
         return [
@@ -133,7 +133,7 @@ class AuthController extends BaseApiController
 
     private function u2fAttestationCheck($attStmt, $rpid_hash, $clientDataJSON, $credentialId, $pubkey_string)
     {
-        $clientDataHash = $this->bufferArrayToString($clientDataJSON);
+        $clientDataHash = $this->byteArrayToString($clientDataJSON);
         $certification = $attStmt['x5c'][0]->get_byte_string();
         $signature = $attStmt['sig'];
         Yii::error($certification);
@@ -141,12 +141,12 @@ class AuthController extends BaseApiController
         $certification = chunk_split($certification,64, "\n");
         $certification_pem = "-----BEGIN CERTIFICATE-----\n$certification-----END CERTIFICATE-----\n";
     
-        // $verificationData = '00' . $rpid_hash . $clientDataHash .  $credentialId . $pubkey_string;
+        $verificationData = '00' . $rpid_hash . $clientDataHash .  $credentialId . $pubkey_string;
     }
 
     private function publicKey($credentialPublicKey)
     {
-        $publickey_json = $this->bufferArrayToCBORObject($credentialPublicKey);
+        $publickey_json = $this->byteArrayToCBORObject($credentialPublicKey);
         // key is [1,3,-1,-2,-3]
         $x = unpack('C*',$publickey_json['-2']->get_byte_string());
         $y = unpack('C*',$publickey_json['-3']->get_byte_string());
@@ -166,7 +166,7 @@ class AuthController extends BaseApiController
         $challenge = $this->createRandomString(32);
         Yii::$app->session->set('wa-challenge', $challenge);
         $user = $this->getUser($email, $rpid);
-        $credentialId = $this->convertHexToByteArray($user['credential_id']);
+        $credentialId = $this->hexToByteArray($user['credential_id']);
 
         return [
             'challenge' => unpack('C*', $challenge),
@@ -186,7 +186,7 @@ class AuthController extends BaseApiController
         $email = $data['email'];
         $origin = Yii::$app->request->origin;
         $rpid = $this->testRpid($origin);
-        $clientDataJSON = $this->bufferArrayToJsonArray($data['response']['clientDataJSON']);
+        $clientDataJSON = $this->byteArrayToJsonArray($data['response']['clientDataJSON']);
         $authenticatorData = $data['response']['authenticatorData'];
         $signature = $data['response']['signature'];
         
@@ -197,7 +197,7 @@ class AuthController extends BaseApiController
         
         // clientdataJsonのハッシュ値を取得する
         $clientDataStr = $data['response']['clientDataJSON'];
-        $clientDataStr = $this->bufferArrayToString($clientDataStr);
+        $clientDataStr = $this->byteArrayToString($clientDataStr);
         $clientDataHash = hash('sha256', $clientDataStr);
 
         // rpidとフラグのチェック
@@ -214,7 +214,7 @@ class AuthController extends BaseApiController
 
         Yii::error($authenticatorData);
         
-        $confirm_sig = array_merge($authenticatorData, $this->convertHexToByteArray($clientDataHash));
+        $confirm_sig = array_merge($authenticatorData, $this->hexToByteArray($clientDataHash));
         Yii::error($confirm_sig);
 
         
@@ -225,11 +225,11 @@ class AuthController extends BaseApiController
         // メタデータの付与
         $pubkey = "3059301306072a8648ce3d020106082a8648ce3d030107034200" . $pubkey;
         // 10進数のbyte arrayへ変換
-        $pubkey = $this->convertHexToByteArray($pubkey);
+        $pubkey = $this->hexToByteArray($pubkey);
         Yii::error($pubkey);
 
         // byte arrayからbase64へ
-        $pubkey = $this->bufferArrayToString($pubkey);
+        $pubkey = $this->byteArrayToString($pubkey);
         $pubkey = base64_encode($pubkey);
         
         // PEMに整形
@@ -237,10 +237,10 @@ class AuthController extends BaseApiController
         $pubkey_pem = "-----BEGIN PUBLIC KEY-----\n$pubkey-----END PUBLIC KEY-----\n";
         Yii::error($pubkey_pem);
 
-        $signature =  $this->bufferArrayToString($signature);
+        $signature =  $this->byteArrayToString($signature);
         Yii::error($signature);
         
-        $confirm_sig =  $this->bufferArrayToString($confirm_sig);
+        $confirm_sig =  $this->byteArrayToString($confirm_sig);
         Yii::error($confirm_sig);
 
         $ok = openssl_verify($confirm_sig, $signature, $pubkey_pem, 'sha256');
@@ -251,21 +251,21 @@ class AuthController extends BaseApiController
         return false;
     }
 
-    private function bufferArrayToString($buffer_array)
+    private function byteArrayToString($byte_array)
     {
-        return implode(array_map("chr", $buffer_array));
+        return implode(array_map("chr", $byte_array));
     }
 
-    private function bufferArrayToJsonArray($buffer_array)
+    private function byteArrayToJsonArray($byte_array)
     {
-        $json = $this->bufferArrayToString($buffer_array);
+        $json = $this->byteArrayToString($byte_array);
         $array = json_decode($json, true);
         return $array;
     }
 
-    private function bufferArrayToCBORObject($buffer_array)
+    private function byteArrayToCBORObject($byte_array)
     {
-        $CBORstring = $this->bufferArrayToString($buffer_array);
+        $CBORstring = $this->byteArrayToString($byte_array);
         $data = CBOREncoder::decode($CBORstring);
         return $data;
     }
@@ -273,7 +273,7 @@ class AuthController extends BaseApiController
     /*
     * byte arrayをbig endianになおして数値化する
     */
-    private function convertEndian($byte_array)
+    private function byteArrayToEndian($byte_array)
     {
         $value = '';
         foreach($byte_array as $num) {
@@ -286,7 +286,7 @@ class AuthController extends BaseApiController
     /*
     * byte array(10進数の配列)を16進数文字列にする
     */
-    private function convertHex($byte_array)
+    private function byteArrayToHex($byte_array)
     {
         $value = '';
         foreach($byte_array as $num) {
@@ -298,7 +298,7 @@ class AuthController extends BaseApiController
     /*
     * 16進数文字列をbyte array(10進数の配列)にする
     */
-    private function convertHexToByteArray($hex)
+    private function hexToByteArray($hex)
     {
         $array = str_split($hex, 2);
         $value = [];
@@ -315,7 +315,7 @@ class AuthController extends BaseApiController
     */
     private function isValidRPID($rpid_hash)
     {
-        $rpid = $this->convertHex($rpid_hash);
+        $rpid = $this->byteArrayToHex($rpid_hash);
         if($rpid !== hash("sha256", self::RPID)){
             return false;
         }
