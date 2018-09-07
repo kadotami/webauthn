@@ -48,7 +48,7 @@ export default {
       const credential = await navigator.credentials.get({ "publicKey": challenge.data})
       console.log(credential)
 
-      const body = {
+      const request_body = {
         email: this.email,
         id: credential.id,
         raw_id: new Uint8Array(credential.rawId),
@@ -60,12 +60,12 @@ export default {
         }
       }
 
-      await this.post(body)
+      await this.post(request_body)
     },
-    post: async function(body) {
-      console.log(body)
+    post: async function(data) {
+      console.log(data)
       const result = await login(
-        body
+        data
       )
       console.log(result)
     }

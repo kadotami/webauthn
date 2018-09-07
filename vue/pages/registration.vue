@@ -67,8 +67,6 @@ export default {
           clientDataJSON:    new Uint8Array(credential.response.clientDataJSON),
         }
       }
-      console.log(body)
-
       await this.post(body)
     },
     post: async function(body) {

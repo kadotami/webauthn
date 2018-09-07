@@ -48,16 +48,16 @@ class AuthController extends BaseApiController
             ],
             'user' => [
                 'id' => unpack('C*', $data['email']),
-                'name' => "mondamin",
-                'displayName' => "mondamin"
+                'name' => "test",
+                'displayName' => "test"
             ],
             'pubKeyCredParams'=> [
                 [
                     'type' => "public-key",
-                    'alg'  => -7,
+                    'alg'  => -7, // "ES256"
                 ]
             ],
-            // 'attestation' => "direct",
+            'attestation' => "direct",
         ];
     }
 
@@ -100,6 +100,9 @@ class AuthController extends BaseApiController
         $origin = Yii::$app->request->origin;
         $rpid = $this->testRpid($origin);
 
+        
+        // attestation check
+
         if($attested_credential_data) {
             $aaguid              = array_slice($authData_byte_array, 37, 16);
             $credentialIdLength  = array_slice($authData_byte_array, 53, 2);
@@ -113,12 +116,32 @@ class AuthController extends BaseApiController
 
             $pubkey_string = $this->convertHex($this->publicKey($credentialPublicKey));
 
+            Yii::error($attestationObject['fmt']);
+            if($attestationObject['fmt'] === 'fido-u2f') {
+                if($this->u2fAttestationCheck($attestationObject['attStmt'], $rpid_hash, $clientDataJSON,$credentialId, $pubkey_string)) {
+
+                }
+            }
+
             $this->createUser($data['email'], $rpid, $this->convertHex($credentialId), $pubkey_string);
         }
 
         return [
             "result" => 'ok'
         ];
+    }
+
+    private function u2fAttestationCheck($attStmt, $rpid_hash, $clientDataJSON, $credentialId, $pubkey_string)
+    {
+        $clientDataHash = $this->bufferArrayToString($clientDataJSON);
+        $certification = $attStmt['x5c'][0]->get_byte_string();
+        $signature = $attStmt['sig'];
+        Yii::error($certification);
+        // PEMに整形
+        $certification = chunk_split($certification,64, "\n");
+        $certification_pem = "-----BEGIN CERTIFICATE-----\n$certification-----END CERTIFICATE-----\n";
+    
+        // $verificationData = '00' . $rpid_hash . $clientDataHash .  $credentialId . $pubkey_string;
     }
 
     private function publicKey($credentialPublicKey)
@@ -174,7 +197,7 @@ class AuthController extends BaseApiController
         
         // clientdataJsonのハッシュ値を取得する
         $clientDataStr = $data['response']['clientDataJSON'];
-        $clientDataStr = implode(array_map("chr", $clientDataStr));
+        $clientDataStr = $this->bufferArrayToString($clientDataStr);
         $clientDataHash = hash('sha256', $clientDataStr);
 
         // rpidとフラグのチェック
@@ -206,7 +229,7 @@ class AuthController extends BaseApiController
         Yii::error($pubkey);
 
         // byte arrayからbase64へ
-        $pubkey = implode(array_map("chr", $pubkey));
+        $pubkey = $this->bufferArrayToString($pubkey);
         $pubkey = base64_encode($pubkey);
         
         // PEMに整形
@@ -214,10 +237,10 @@ class AuthController extends BaseApiController
         $pubkey_pem = "-----BEGIN PUBLIC KEY-----\n$pubkey-----END PUBLIC KEY-----\n";
         Yii::error($pubkey_pem);
 
+        $signature =  $this->bufferArrayToString($signature);
         Yii::error($signature);
-        $signature = implode(array_map("chr", $signature));
         
-        $confirm_sig = implode(array_map("chr", $confirm_sig));
+        $confirm_sig =  $this->bufferArrayToString($confirm_sig);
         Yii::error($confirm_sig);
 
         $ok = openssl_verify($confirm_sig, $signature, $pubkey_pem, 'sha256');
@@ -228,16 +251,21 @@ class AuthController extends BaseApiController
         return false;
     }
 
+    private function bufferArrayToString($buffer_array)
+    {
+        return implode(array_map("chr", $buffer_array));
+    }
+
     private function bufferArrayToJsonArray($buffer_array)
     {
-        $json = implode(array_map("chr", $buffer_array));
-        $json = json_decode($json, true);
-        return $json;
+        $json = $this->bufferArrayToString($buffer_array);
+        $array = json_decode($json, true);
+        return $array;
     }
 
     private function bufferArrayToCBORObject($buffer_array)
     {
-        $CBORstring = implode(array_map("chr", $buffer_array));
+        $CBORstring = $this->bufferArrayToString($buffer_array);
         $data = CBOREncoder::decode($CBORstring);
         return $data;
     }
