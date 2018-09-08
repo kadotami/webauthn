@@ -117,16 +117,20 @@ class AuthController extends BaseApiController
                 throw new Exception("invalid!!! not match credential id");
             }
 
-            $pubkey_string = $this->byteArrayToHex($this->publicKey($credentialPublicKey));
+            $pubkey_hex = $this->byteArrayToHex($this->publicKey($credentialPublicKey));
 
             Yii::error($attestationObject['fmt']);
             if($attestationObject['fmt'] === 'fido-u2f') {
-                if($this->u2fAttestationCheck($attestationObject['attStmt'], $rpid_hash, $clientDataHash, $credentialId, $pubkey_string)) {
-                    Yii::error('success');
+                if(!$this->u2fAttestationCheck($attestationObject['attStmt'], $rpid_hash, $clientDataHash, $credentialId, $pubkey_hex)) {
+                    return [
+                        "result" => 'ng'
+                    ];
                 }
             }
 
-            $this->createUser($data['email'], $rpid, $credentialId, $pubkey_string);
+            $pubkey_pem = $this->createPubkeyPem($pubkey_hex);
+
+            $this->createUser($data['email'], $rpid, $credentialId, $pubkey_pem);
         }
 
         return [
@@ -170,6 +174,22 @@ class AuthController extends BaseApiController
         $z = array_merge([4],$x,$y);
 
         return $z;
+    }
+
+    private function createPubkeyPem($pubkey_hex)
+    {
+        // メタデータの付与
+        $pubkey_hex = "3059301306072a8648ce3d020106082a8648ce3d030107034200" . $pubkey_hex;
+        // 10進数のbyte arrayへ変換
+        $pubkey = $this->hexToByteArray($pubkey_hex);
+        // byte arrayからbase64へ
+        $pubkey = $this->byteArrayToString($pubkey);
+        $pubkey = base64_encode($pubkey);
+        
+        // PEMに整形
+        $pubkey = chunk_split($pubkey,64, "\n");
+        $pubkey_pem = "-----BEGIN PUBLIC KEY-----\n$pubkey-----END PUBLIC KEY-----\n";
+        return $pubkey_pem;
     }
 
     public function actionLoginChallenge()
@@ -239,28 +259,13 @@ class AuthController extends BaseApiController
         $pubkey = $user['publickey'];
         Yii::error($pubkey);
 
-        // メタデータの付与
-        $pubkey = "3059301306072a8648ce3d020106082a8648ce3d030107034200" . $pubkey;
-        // 10進数のbyte arrayへ変換
-        $pubkey = $this->hexToByteArray($pubkey);
-        Yii::error($pubkey);
-
-        // byte arrayからbase64へ
-        $pubkey = $this->byteArrayToString($pubkey);
-        $pubkey = base64_encode($pubkey);
-        
-        // PEMに整形
-        $pubkey = chunk_split($pubkey,64, "\n");
-        $pubkey_pem = "-----BEGIN PUBLIC KEY-----\n$pubkey-----END PUBLIC KEY-----\n";
-        Yii::error($pubkey_pem);
-
         $signature = $this->byteArrayToString($signature);
         Yii::error($signature);
         
         $confirm_sig =  $this->byteArrayToString($confirm_sig);
         Yii::error($confirm_sig);
 
-        $ok = openssl_verify($confirm_sig, $signature, $pubkey_pem, 'sha256');
+        $ok = openssl_verify($confirm_sig, $signature, $pubkey, 'sha256');
         if($ok === 1 ) {
             return true;
         }
