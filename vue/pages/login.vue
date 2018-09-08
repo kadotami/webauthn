@@ -1,18 +1,20 @@
 <template lang="pug">
-  .container
-    section.content
-      .login
-        .login__column
-          h1 ログイン
-          .form
-            label メールアドレス（ID）
-            input(v-model="email", type=text)
-            button(@click="wa_login()") WebAuthnでログイン
-        .login__column
-          .thirdPartyBtn Yahoo! JAPAN IDでログイン
-          .thirdPartyBtn Facebookアカウントでログイン
-          .thirdPartyBtn Googleアカウントでログイン
-          .thirdPartyBtn LINEアカウントでログイン
+  .login
+    KeyTouch(:display='display')
+    .container
+      section.content
+        .login
+          .login__column
+            h1 ログイン
+            .form
+              label メールアドレス（ID）
+              input(v-model="email", type=text)
+              button(@click="wa_login()") WebAuthnでログイン
+          .login__column
+            .thirdPartyBtn Yahoo! JAPAN IDでログイン
+            .thirdPartyBtn Facebookアカウントでログイン
+            .thirdPartyBtn Googleアカウントでログイン
+            .thirdPartyBtn LINEアカウントでログイン
 </template>
 
 <script>
@@ -20,14 +22,19 @@ import { mapGetters } from 'vuex'
 import { mapMutations } from 'vuex'
 import { mapActions } from 'vuex'
 import { getLoginChallenge, login } from '../utils/auth'
+import KeyTouch from '~/components/KeyTouch.vue'
 
 export default {
+  components: {
+    KeyTouch
+  },
   computed: mapGetters([
     'getIsLogin'
   ]),
   data: () => {
     return { 
-      email: ''
+      email: '',
+      display: false
     }
   },
   methods: {
@@ -45,7 +52,9 @@ export default {
       challenge.data.allowCredentials[0].id = new Uint8Array(Object.values(challenge.data.allowCredentials[0].id))
       
       console.log(challenge.data)
+      this.display = true
       const credential = await navigator.credentials.get({ "publicKey": challenge.data})
+      this.display = false
       console.log(credential)
 
       const request_body = {

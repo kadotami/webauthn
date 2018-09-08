@@ -57,7 +57,7 @@ export default {
       this.display = false
       const response = credential.response
 
-      const body = {
+      const request_body = {
         email: this.email,
         id:    credential.id,
         raw_id: new Uint8Array(credential.rawId),
@@ -67,12 +67,12 @@ export default {
           clientDataJSON:    new Uint8Array(credential.response.clientDataJSON),
         }
       }
-      await this.post(body)
+      await this.post(request_body)
     },
-    post: async function(body) {
-      console.log(body)
+    post: async function(data) {
+      console.log(data)
       const result = await postRegisterCredential(
-        body
+        data
       )
       console.log(result)
     }
