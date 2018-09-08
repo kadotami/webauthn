@@ -16,14 +16,13 @@
           .thirdPartyBtn Facebookアカウントで登録
           .thirdPartyBtn Googleアカウントで登録
           .thirdPartyBtn(@click="post()") LINEアカウントで登録
-
-      
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
 import { mapMutations } from 'vuex'
 import { mapActions } from 'vuex'
+import { Base64 } from 'js-base64';
 import { getRegisterChallenge, postRegisterCredential } from '../utils/auth'
 import KeyTouch from '~/components/KeyTouch.vue'
 
@@ -49,11 +48,12 @@ export default {
         'email': this.email
       }
       const challenge = await getRegisterChallenge(user)
-      console.log(challenge)
-      challenge.data.challenge = new Uint8Array(Object.values(challenge.data.challenge))
-      challenge.data.user.id = new Uint8Array(Object.values(challenge.data.user.id))
+      const option = challenge.data
+      option.challenge = new TextEncoder().encode(Base64.decode(option.challenge))
+      option.user.id = new TextEncoder().encode(Base64.decode(option.user.id))
+      console.log(option)
       this.display = true
-      const credential = await navigator.credentials.create({publicKey: challenge.data})
+      const credential = await navigator.credentials.create({publicKey: option})
       this.display = false
       const response = credential.response
 

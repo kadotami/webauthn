@@ -21,6 +21,7 @@
 import { mapGetters } from 'vuex'
 import { mapMutations } from 'vuex'
 import { mapActions } from 'vuex'
+import { Base64 } from 'js-base64';
 import { getLoginChallenge, login } from '../utils/auth'
 import KeyTouch from '~/components/KeyTouch.vue'
 
@@ -45,15 +46,14 @@ export default {
       const user = {
         'email': this.email
       }
-      console.log(user)
       const challenge = await getLoginChallenge(user)
-      console.log(challenge)
-      challenge.data.challenge = new Uint8Array(Object.values(challenge.data.challenge))
-      challenge.data.allowCredentials[0].id = new Uint8Array(Object.values(challenge.data.allowCredentials[0].id))
+      const option = challenge.data
+      option.challenge = new TextEncoder().encode(Base64.decode(option.challenge))
+      option.allowCredentials[0].id = new Uint8Array(option.allowCredentials[0].id)
+      console.log(option)
       
-      console.log(challenge.data)
       this.display = true
-      const credential = await navigator.credentials.get({ "publicKey": challenge.data})
+      const credential = await navigator.credentials.get({ "publicKey": option})
       this.display = false
       console.log(credential)
 
