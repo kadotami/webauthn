@@ -71,7 +71,11 @@ class AuthController extends BaseApiController
         $rawid = $data['raw_id'];
         $clientDataJSON = $this->byteArrayToJsonArray($data['response']['clientDataJSON']);
         $attestationObject = $this->byteArrayToCBORObject($data['response']['attestationObject']);
-        
+
+        $clientDataHash = $this->byteArrayToString($data['response']['clientDataJSON']);
+        $clientDataHash = hash('sha256', $clientDataHash);
+
+
         if($data['email'] !==  Yii::$app->session->get('wa-username')) {
             throw new Exception("invalid!!! email is not correct");
         }
@@ -108,9 +112,10 @@ class AuthController extends BaseApiController
             $credentialIdLength  = array_slice($authData_byte_array, 53, 2);
             $credentialIdLength = $this->byteArrayToEndian($credentialIdLength);
             $credentialId = array_slice($authData_byte_array, 55, $credentialIdLength);
+            $credentialId = $this->byteArrayToHex($credentialId);
             $credentialPublicKey = array_slice($authData_byte_array, 55 + $credentialIdLength);
 
-            if($this->byteArrayToHex($credentialId) !== $this->byteArrayToHex($rawid)){
+            if($credentialId !== $this->byteArrayToHex($rawid)){
                 throw new Exception("invalid!!! not match credential id");
             }
 
@@ -118,12 +123,12 @@ class AuthController extends BaseApiController
 
             Yii::error($attestationObject['fmt']);
             if($attestationObject['fmt'] === 'fido-u2f') {
-                if($this->u2fAttestationCheck($attestationObject['attStmt'], $rpid_hash, $clientDataJSON,$credentialId, $pubkey_string)) {
-
+                if($this->u2fAttestationCheck($attestationObject['attStmt'], $rpid_hash, $clientDataHash, $credentialId, $pubkey_string)) {
+                    Yii::error('success');
                 }
             }
 
-            $this->createUser($data['email'], $rpid, $this->byteArrayToHex($credentialId), $pubkey_string);
+            $this->createUser($data['email'], $rpid, $credentialId, $pubkey_string);
         }
 
         return [
@@ -131,17 +136,32 @@ class AuthController extends BaseApiController
         ];
     }
 
-    private function u2fAttestationCheck($attStmt, $rpid_hash, $clientDataJSON, $credentialId, $pubkey_string)
+    private function u2fAttestationCheck($attStmt, $rpid_hash, $clientDataHash, $credentialId, $pubkey_string)
     {
-        $clientDataHash = $this->byteArrayToString($clientDataJSON);
         $certification = $attStmt['x5c'][0]->get_byte_string();
-        $signature = $attStmt['sig'];
-        Yii::error($certification);
+        $signature = $attStmt['sig']->get_byte_string();
+        
         // PEMに整形
-        $certification = chunk_split($certification,64, "\n");
-        $certification_pem = "-----BEGIN CERTIFICATE-----\n$certification-----END CERTIFICATE-----\n";
-    
-        $verificationData = '00' . $rpid_hash . $clientDataHash .  $credentialId . $pubkey_string;
+        $certification = base64_encode($certification);
+        $certification = chunk_split($certification, 64, "\n");
+        $certification_pem = "-----BEGIN CERTIFICATE-----\n$certification-----END CERTIFICATE-----";
+        
+        Yii::error($clientDataHash);
+        $verificationData = '00' . $this->byteArrayToHex($rpid_hash) . $clientDataHash .  $credentialId . $pubkey_string;
+        Yii::error($this->hexToByteArray($verificationData));
+        
+        $verificationData = $this->byteArrayToString($this->hexToByteArray($verificationData));
+        Yii::error($certification_pem);
+
+        Yii::error(unpack('C*',$signature));
+
+        $ok = openssl_verify($verificationData, $signature, $certification_pem, 'sha256');
+        Yii::error($ok);
+
+        if($ok === 1 ) {
+            return true;
+        }
+        return false;
     }
 
     private function publicKey($credentialPublicKey)
@@ -237,7 +257,7 @@ class AuthController extends BaseApiController
         $pubkey_pem = "-----BEGIN PUBLIC KEY-----\n$pubkey-----END PUBLIC KEY-----\n";
         Yii::error($pubkey_pem);
 
-        $signature =  $this->byteArrayToString($signature);
+        $signature = $this->byteArrayToString($signature);
         Yii::error($signature);
         
         $confirm_sig =  $this->byteArrayToString($confirm_sig);
@@ -307,7 +327,6 @@ class AuthController extends BaseApiController
         }
         return $value;
     }
-
 
     /*
     *
