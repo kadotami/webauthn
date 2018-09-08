@@ -26,6 +26,7 @@ chown -R vagrant.vagrant /home/vagrant/.ssh
       server.vm.box = "bento/centos-7.4"
       server.vm.network :private_network, ip: server_config['ip']
       server.vm.network :forwarded_port, guest: 22, host: server_config['port'], id: "ssh"
+      config.vm.network :forwarded_port,  guest:3306, host:3390
       server.vm.provider "virtualbox" do |v|
         v.customize ["modifyvm", :id, "--memory", server_config['memory_size']]
         v.customize ["modifyvm", :id, "--natdnshostresolver1", "on"]
