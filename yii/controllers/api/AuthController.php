@@ -41,13 +41,13 @@ class AuthController extends BaseApiController
         Yii::$app->session->set('wa-username', $data['email']);
         
         return [
-            'challenge' => unpack('C*', $challenge),
+            'challenge' => base64_encode($challenge),
             'rp' => [
                 'id' => $rpid,
                 'name' => 'WebAuthnTest',
             ],
             'user' => [
-                'id' => unpack('C*', $data['email']),
+                'id' => base64_encode($data['email']),
                 'name' => "test",
                 'displayName' => "test"
             ],
@@ -67,6 +67,9 @@ class AuthController extends BaseApiController
         if (empty($data['email'])) {
             throw new Exception("invalid!!! email is not allowed empty");
         }
+        if($data['email'] !==  Yii::$app->session->get('wa-username')) {
+            throw new Exception("invalid!!! email is not correct");
+        }
 
         $rawid = $data['raw_id'];
         $clientDataJSON = $this->byteArrayToJsonArray($data['response']['clientDataJSON']);
@@ -74,11 +77,6 @@ class AuthController extends BaseApiController
 
         $clientDataHash = $this->byteArrayToString($data['response']['clientDataJSON']);
         $clientDataHash = hash('sha256', $clientDataHash);
-
-
-        if($data['email'] !==  Yii::$app->session->get('wa-username')) {
-            throw new Exception("invalid!!! email is not correct");
-        }
 
         if (!$this->isValidRegistrationClientDataJSON($clientDataJSON)) {
             throw new Exception("invalid!!! client data is not correct");
@@ -146,7 +144,6 @@ class AuthController extends BaseApiController
         $certification = chunk_split($certification, 64, "\n");
         $certification_pem = "-----BEGIN CERTIFICATE-----\n$certification-----END CERTIFICATE-----";
         
-        Yii::error($clientDataHash);
         $verificationData = '00' . $this->byteArrayToHex($rpid_hash) . $clientDataHash .  $credentialId . $pubkey_string;
         Yii::error($this->hexToByteArray($verificationData));
         
@@ -189,7 +186,7 @@ class AuthController extends BaseApiController
         $credentialId = $this->hexToByteArray($user['credential_id']);
 
         return [
-            'challenge' => unpack('C*', $challenge),
+            'challenge' => base64_encode($challenge),
             'rpId' => $rpid,
             'allowCredentials' => [
                 [
