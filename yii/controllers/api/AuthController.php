@@ -28,9 +28,6 @@ class AuthController extends BaseApiController
 
     public function actionRegisterChallenge()
     {
-        // デモ用
-        $origin = Yii::$app->request->origin;
-        $rpid = $this->testRpid($origin);
 
         $data = Yii::$app->request->post();
         if (empty($data['email'])){
@@ -43,7 +40,7 @@ class AuthController extends BaseApiController
         return [
             'challenge' => base64_encode($challenge),
             'rp' => [
-                'id' => $rpid,
+                'id' => self::RPID,
                 'name' => 'WebAuthnTest',
             ],
             'user' => [
