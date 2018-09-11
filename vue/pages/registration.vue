@@ -68,6 +68,7 @@ export default {
         }
       }
       await this.post(request_body)
+      this.$router.push('main')
     },
     post: async function(data) {
       console.log(data)
