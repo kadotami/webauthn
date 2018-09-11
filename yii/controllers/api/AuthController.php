@@ -12,7 +12,8 @@ use \yii\base\Exception;
 class AuthController extends BaseApiController
 {
     public $modelClass = 'app\models\User';
-    const RPID = 'kdtm.com';
+    const RPID = 'webauthn.kdtm.com';
+    // const RPID = 'kdtm.com';
 
     /**
      * 

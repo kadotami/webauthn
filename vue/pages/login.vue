@@ -51,9 +51,18 @@ export default {
       option.challenge = new TextEncoder().encode(Base64.decode(option.challenge))
       option.allowCredentials[0].id = new Uint8Array(option.allowCredentials[0].id)
       console.log(option)
+
+      //demo用
+      option.rpId = 'kdtm.com'
       
       this.display = true
-      const credential = await navigator.credentials.get({ "publicKey": option})
+      try {
+        const credential = await navigator.credentials.get({ "publicKey": option})
+      } catch(err) {
+        console.log(err)
+        this.display = false
+        return
+      }
       this.display = false
       console.log(credential)
 
