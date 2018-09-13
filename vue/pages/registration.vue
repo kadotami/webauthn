@@ -55,7 +55,6 @@ export default {
       this.display = true
       const credential = await navigator.credentials.create({publicKey: option})
       this.display = false
-      const response = credential.response
 
       const request_body = {
         email: this.email,
@@ -67,11 +66,12 @@ export default {
           clientDataJSON:    new Uint8Array(credential.response.clientDataJSON),
         }
       }
+      console.log(request_body)
       await this.post(request_body)
       this.$router.push('main')
     },
     post: async function(data) {
-      console.log(data)
+      
       const result = await postRegisterCredential(
         data
       )
