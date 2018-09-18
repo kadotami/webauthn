@@ -46,26 +46,24 @@ export default {
       const user = {
         'email': this.email
       }
-      const challenge = await getLoginChallenge(user)
-      const option = challenge.data
+      let challenge = await getLoginChallenge(user)
+      let option = challenge.data
       option.challenge = new TextEncoder().encode(Base64.decode(option.challenge))
       option.allowCredentials[0].id = new Uint8Array(option.allowCredentials[0].id)
       console.log(option)
 
       //demo用
-      option.rpId = 'kdtm.com'
+      //option.rpId = 'kdtm.com'
       
       this.display = true
-      try {
-        const credential = await navigator.credentials.get({ "publicKey": option})
-      } catch(err) {
-        console.log(err)
+      let credential = await navigator.credentials.get({ "publicKey": option}).catch(err => {
         this.display = false
-        return
-      }
-      this.display = false
+        throw(err)
+      })
+      
       console.log(credential)
-
+      this.display = false
+        
       const request_body = {
         email: this.email,
         id: credential.id,

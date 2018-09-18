@@ -252,7 +252,6 @@ class AuthController extends BaseApiController
         $confirm_sig = array_merge($authenticatorData, $this->hexToByteArray($clientDataHash));
         Yii::error($confirm_sig);
 
-        
         $user = $this->getUser($email, $rpid);
         $pubkey = $user['publickey'];
         Yii::error($pubkey);
