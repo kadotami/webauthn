@@ -108,27 +108,26 @@ class AuthController extends BaseApiController
             $credentialIdLength  = array_slice($authData_byte_array, 53, 2);
             $credentialIdLength = $this->byteArrayToEndian($credentialIdLength);
             $credentialId = array_slice($authData_byte_array, 55, $credentialIdLength);
-            $credentialId = $this->byteArrayToHex($credentialId);
             $credentialPublicKey = array_slice($authData_byte_array, 55 + $credentialIdLength);
 
-            if($credentialId !== $this->byteArrayToHex($rawid)){
+            if($credentialId !== $rawid){
                 throw new Exception("invalid!!! not match credential id");
             }
 
-            $pubkey_hex = $this->byteArrayToHex($this->publicKey($credentialPublicKey));
+            $pubkey_byte = $this->publicKey($credentialPublicKey);
 
             Yii::error($attestationObject['fmt']);
             if($attestationObject['fmt'] === 'fido-u2f') {
-                if(!$this->u2fAttestationCheck($attestationObject['attStmt'], $rpid_hash, $clientDataHash, $credentialId, $pubkey_hex)) {
+                if(!$this->u2fAttestationCheck($attestationObject['attStmt'], $rpid_hash, $clientDataHash, $credentialId, $pubkey_byte)) {
                     return [
                         "result" => 'ng'
                     ];
                 }
             }
 
-            $pubkey_pem = $this->createPubkeyPem($pubkey_hex);
+            $pubkey_pem = $this->createPubkeyPem($pubkey_byte);
 
-            $this->createUser($data['email'], $rpid, $credentialId, $pubkey_pem);
+            $this->createUser($data['email'], $rpid, $data['id'], $pubkey_pem);
         }
 
         return [
@@ -146,10 +145,10 @@ class AuthController extends BaseApiController
         $certification = chunk_split($certification, 64, "\n");
         $certification_pem = "-----BEGIN CERTIFICATE-----\n$certification-----END CERTIFICATE-----";
         
-        $verificationData = '00' . $this->byteArrayToHex($rpid_hash) . $clientDataHash .  $credentialId . $pubkey_string;
+        $verificationData = array_merge([0],$rpid_hash,$this->hexToByteArray($clientDataHash),$credentialId, $pubkey_string);
         Yii::error($this->hexToByteArray($verificationData));
         
-        $verificationData = $this->byteArrayToString($this->hexToByteArray($verificationData));
+        $verificationData = $this->byteArrayToString($verificationData);
         Yii::error($certification_pem);
 
         Yii::error(unpack('C*',$signature));
@@ -174,10 +173,10 @@ class AuthController extends BaseApiController
         return $z;
     }
 
-    private function createPubkeyPem($pubkey_hex)
+    private function createPubkeyPem($pubkey_byte)
     {
         // メタデータの付与
-        $pubkey_hex = "3059301306072a8648ce3d020106082a8648ce3d030107034200" . $pubkey_hex;
+        $pubkey_hex = "3059301306072a8648ce3d020106082a8648ce3d030107034200" . $this->byteArrayToHex($pubkey_byte);
         // 10進数のbyte arrayへ変換
         $pubkey = $this->hexToByteArray($pubkey_hex);
         // byte arrayからbase64へ
@@ -201,7 +200,7 @@ class AuthController extends BaseApiController
         $challenge = $this->createRandomString(32);
         Yii::$app->session->set('wa-challenge', $challenge);
         $user = $this->getUser($email, $rpid);
-        $credentialId = $this->hexToByteArray($user['credential_id']);
+        $credentialId = unpack('C*', $user['credential_id']);
 
         return [
             'challenge' => base64_encode($challenge),
