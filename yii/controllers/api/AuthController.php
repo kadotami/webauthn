@@ -127,7 +127,7 @@ class AuthController extends BaseApiController
 
             $pubkey_pem = $this->createPubkeyPem($pubkey_byte);
 
-            $this->createUser($data['email'], $rpid, $data['id'], $pubkey_pem);
+            $this->createUser($data['email'], $rpid, $this->byteArrayToHex($data['raw_id']), $pubkey_pem);
         }
 
         return [
@@ -200,7 +200,7 @@ class AuthController extends BaseApiController
         $challenge = $this->createRandomString(32);
         Yii::$app->session->set('wa-challenge', $challenge);
         $user = $this->getUser($email, $rpid);
-        $credentialId = unpack('C*', $user['credential_id']);
+        $credentialId = $this->hexToByteArray($user['credential_id']);
 
         return [
             'challenge' => base64_encode($challenge),
