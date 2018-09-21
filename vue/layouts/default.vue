@@ -2,7 +2,7 @@
   <div>
     <header>
       <div class='header-content'>
-        Webauthn
+        WebAuthn
       </div>
     </header>
     <nuxt/>
@@ -32,14 +32,21 @@ html {
 header {
   border-bottom: 2px solid #eaeaea;
   padding: 8px 0 4px 0;
+  @media screen and (max-width:700px) {
+    width: 100%;
+    height: 48px;
+    padding: 0;
+  } 
   .header-content {
     display: block;
     width: 770px;
     margin: 0 auto;
     text-align: left;
-    img {
-      width: 90px;
-    }
+    @media screen and (max-width:700px) {
+      width: 100%;
+      line-height: 48px;
+      padding: 0 24px;
+    } 
   }
 }
 </style>

@@ -95,13 +95,17 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-  $container_width: 384px;
+$container_width: 384px;
   $bg_color: #fff;
   .container {
     font-family: Verdana, Roboto, "Droid Sans", "メイリオ", Meiryo, "ヒラギノ角ゴ ProN W3", "Hiragino Kaku Gothic ProN", "ＭＳ Ｐゴシック", sans-serif;
     position: relative;
     width: $container_width;
     margin: 30px auto 40px;
+    @media screen and (max-width:700px) {
+      width: 96%;
+      margin: 30px 2% 40px;
+    } 
     .content {
       background: $bg_color;
       box-shadow: 0px 0px 6px rgba(0,0,0,0.2);
@@ -127,6 +131,9 @@ export default {
           font-size: 14px;
           line-height: 14px;
           width: 300px;
+          @media screen and (max-width:700px) {
+            width: 100%;
+          } 
         }
 
         button {
@@ -144,6 +151,9 @@ export default {
           width: 300px;
           height: 60px;
           margin: 16px 0 0 0;
+          @media screen and (max-width:700px) {
+            width: 100%;
+          } 
         }
         .toLogin {
           margin-top: 16px;
@@ -192,6 +202,9 @@ export default {
             box-shadow: 0px 0px 2px #cccccc;
             transform: translateY(1px);
           }
+          @media screen and (max-width:700px) {
+            width: 100%;
+          } 
         }
       }
     }

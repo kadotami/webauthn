@@ -30,6 +30,10 @@ export default {
   .links {
     width: 600px;
     margin: 0 auto;
+    @media screen and (max-width:700px) {
+      width: 96%;
+      margin: 0 2%;
+    } 
     .btn {
       width: 200px;
       height: 48px;
@@ -42,6 +46,10 @@ export default {
       color: #fff;
       border-radius: 5px;
       box-shadow: 0px 2px 5px #a5a5a5;
+
+      @media screen and (max-width:700px) {
+        width: 40%;
+      } 
 
       &--last {
         float: right;

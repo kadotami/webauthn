@@ -34,6 +34,10 @@ export default {
     background: $bg_color;
     box-sizing: border-box;
     z-index: 100;
+    @media screen and (max-width:700px) {
+      width: 80%;
+      margin: 24px 10%;
+    } 
 
     h1 {
       margin: 16px 0;
