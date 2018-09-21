@@ -53,6 +53,8 @@ class AuthController extends BaseApiController
                 [
                     'type' => "public-key",
                     'alg'  => -7, // "ES256"
+                    // 'alg'  => -257, //RS256
+                    // 'alg'  => -37, //PS256
                 ]
             ],
             'attestation' => "direct",
@@ -86,7 +88,9 @@ class AuthController extends BaseApiController
 
         $rpid_hash = array_slice($authData_byte_array, 0, 32);
         $flag = str_pad(decbin($authData_byte_array[32]), 8, 0, STR_PAD_LEFT);
-        $counter = $this->byteArrayToEndian(array_slice($authData_byte_array, 33, 4));
+        $sign_count = $this->byteArrayToEndian(array_slice($authData_byte_array, 33, 4));
+        
+        Yii::error($authData_byte_array);
 
         if(!$this->isValidRPID($rpid_hash)) {
             throw new Exception("invalid!!! not match rpid");
@@ -127,7 +131,7 @@ class AuthController extends BaseApiController
 
             $pubkey_pem = $this->createPubkeyPem($pubkey_byte);
 
-            $this->createUser($data['email'], $rpid, $this->byteArrayToHex($data['raw_id']), $pubkey_pem);
+            $this->createUser($data['email'], $rpid, $this->byteArrayToHex($data['raw_id']), $pubkey_pem, $sign_count);
         }
 
         return [
@@ -146,7 +150,6 @@ class AuthController extends BaseApiController
         $certification_pem = "-----BEGIN CERTIFICATE-----\n$certification-----END CERTIFICATE-----";
         
         $verificationData = array_merge([0],$rpid_hash,$this->hexToByteArray($clientDataHash),$credentialId, $pubkey_string);
-        Yii::error($this->hexToByteArray($verificationData));
         
         $verificationData = $this->byteArrayToString($verificationData);
         Yii::error($certification_pem);
@@ -237,7 +240,7 @@ class AuthController extends BaseApiController
         // rpidとフラグのチェック
         $rpid_hash = array_slice($authenticatorData, 0, 32);
         $flag = str_pad(decbin($authenticatorData[32]), 8, 0, STR_PAD_LEFT);
-        $sig_count = array_slice($authenticatorData, 33);
+        $sign_count = $this->byteArrayToEndian(array_slice($authenticatorData, 33));
         if(!$this->isValidRPID($rpid_hash)) {
             throw new Exception("invalid!!! not match rpid");
         }
@@ -252,17 +255,22 @@ class AuthController extends BaseApiController
         Yii::error($confirm_sig);
 
         $user = $this->getUser($email, $rpid);
+        if($user['sign_count'] >= $sign_count) {
+            throw new Exception("invalid!!! sign_count larger than send param.");
+        }
+
         $pubkey = $user['publickey'];
         Yii::error($pubkey);
 
         $signature = $this->byteArrayToString($signature);
         Yii::error($signature);
         
-        $confirm_sig =  $this->byteArrayToString($confirm_sig);
+        $confirm_sig = $this->byteArrayToString($confirm_sig);
         Yii::error($confirm_sig);
 
         $ok = openssl_verify($confirm_sig, $signature, $pubkey, 'sha256');
-        if($ok === 1 ) {
+        if($ok === 1) {
+            $this->updateUser($email, $rpid, $sign_count);
             return true;
         }
 
@@ -384,18 +392,19 @@ class AuthController extends BaseApiController
         return $challenge;
     }
 
-    private function createUser($email, $rpid, $credential_id, $publickey)
+    private function createUser($email, $rpid, $credential_id, $publickey, $sign_count)
     {
         $sql = <<<SQL
             INSERT INTO user
-                (email, rpid, credential_id, publickey)
-            VALUES (:email, :rpid, :credential_id, :publickey)
+                (email, rpid, credential_id, publickey, sign_count)
+            VALUES (:email, :rpid, :credential_id, :publickey, :sign_count)
 SQL;
         Yii::$app->db->createCommand($sql, [
             ":email" => $email,
             ":rpid" => $rpid,
             ":credential_id" => $credential_id,
             ":publickey" => $publickey,
+            ":sign_count" => $sign_count,
         ])->execute();
     }
 
@@ -410,6 +419,22 @@ SQL;
             ":rpid" => $rpid,
             ":email" => $email,
         ])->queryOne();
+        return $user;
+    }
+
+    private function updateUser($email, $rpid, $sign_count)
+    {
+        $sql = <<<SQL
+            UPDATE user
+                SET sign_count = :sign_count
+            WHERE email = :email
+                AND rpid = :rpid
+SQL;
+        $user = Yii::$app->db->createCommand($sql, [
+            ":sign_count" => $sign_count,
+            ":rpid" => $rpid,
+            ":email" => $email,
+        ])->execute();
         return $user;
     }
 

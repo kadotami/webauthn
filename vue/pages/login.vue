@@ -53,7 +53,7 @@ export default {
       console.log(option)
 
       //demo用
-      //option.rpId = 'kdtm.com'
+      //option.rpId = 'webauthn-second.kdtm.com'
       
       this.display = true
       let credential = await navigator.credentials.get({ "publicKey": option}).catch(err => {

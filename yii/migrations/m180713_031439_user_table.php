@@ -18,6 +18,7 @@ class m180713_031439_user_table extends Migration
             'email' => $this->string(),
             'credential_id' => $this->string(),
             'publickey' => $this->text(),
+            'sign_count' => $this->integer(),
         ]);
     }
 
