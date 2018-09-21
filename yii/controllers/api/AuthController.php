@@ -240,7 +240,8 @@ class AuthController extends BaseApiController
         // rpidとフラグのチェック
         $rpid_hash = array_slice($authenticatorData, 0, 32);
         $flag = str_pad(decbin($authenticatorData[32]), 8, 0, STR_PAD_LEFT);
-        $sign_count = $this->byteArrayToEndian(array_slice($authenticatorData, 33));
+        $sign_count = $this->byteArrayToEndian(array_slice($authenticatorData, 33, 4));
+        Yii::error(array_slice($authenticatorData, 33, 4));
         if(!$this->isValidRPID($rpid_hash)) {
             throw new Exception("invalid!!! not match rpid");
         }
